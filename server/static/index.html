@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Otto</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Rajdhani:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0a0710;
+      --surface:   #110d1a;
+      --accent:    #c084fc;
+      --accent2:   #fb923c;
+      --dim:       #2a1f3d;
+      --muted:     #5b4a72;
+      --text:      #e2d4f0;
+      --danger:    #f87171;
+      --warn:      #fbbf24;
+      --font-mono: 'DM Mono', monospace;
+      --font-ui:   'Rajdhani', sans-serif;
+      --font-display: 'Cormorant Garamond', serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--bg);
+      background-image:
+        radial-gradient(ellipse 60% 50% at 30% 20%, rgba(192,132,252,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 75% 80%, rgba(251,146,60,0.06) 0%, transparent 60%);
+      color: var(--text);
+      font-family: var(--font-ui);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      overflow: hidden;
+      user-select: none;
+      position: relative;
+    }
+
+    /* ── Grain noise overlay ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+      pointer-events: none;
+      z-index: 100;
+      opacity: 0.6;
+    }
+
+    /* ── Ambient glow corner ── */
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -60px; left: -60px;
+      width: 280px; height: 280px;
+      background: radial-gradient(circle, rgba(192,132,252,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      border-radius: 50%;
+    }
+
+    /* ── Status bar ── */
+    #ws-status {
+      position: fixed; top: 18px; left: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.58rem; letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      display: flex; align-items: center; gap: 6px;
+      transition: color 0.4s;
+    }
+    #ws-status .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.4s, box-shadow 0.4s;
+    }
+    #ws-status.connected .dot  { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+    #ws-status.connected       { color: var(--accent); }
+    #ws-status.reconnecting .dot { background: var(--warn); box-shadow: 0 0 8px var(--warn); animation: blink-dot 0.8s step-end infinite; }
+    #ws-status.reconnecting    { color: var(--warn); }
+    #ws-status.disconnected .dot { background: var(--danger); }
+    #ws-status.disconnected    { color: var(--danger); }
+
+    /* ── Mic indicator ── */
+    .mic-wrap {
+      position: fixed; top: 14px; right: 18px;
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer;
+    }
+    .mic-wrap span {
+      font-family: var(--font-mono);
+      font-size: 0.55rem; letter-spacing: 2px;
+      color: var(--muted); text-transform: uppercase;
+      transition: color 0.3s;
+    }
+    #mic-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+      box-shadow: 0 0 10px var(--danger);
+      transition: all 0.3s;
+    }
+    #mic-dot.granted { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+
+    /* ── Title ── */
+    h1 {
+      font-family: var(--font-display);
+      font-size: 2.6rem;
+      font-weight: 300;
+      font-style: italic;
+      letter-spacing: 14px;
+      color: var(--accent);
+      text-indent: 14px;
+      text-shadow:
+        0 0 40px rgba(192,132,252,0.4),
+        0 0 80px rgba(192,132,252,0.15);
+      flex-shrink: 0;
+    }
+    /* subtle version tag */
+    h1::after {
+      content: ' v2';
+      font-size: 0.42rem;
+      font-family: var(--font-mono);
+      font-style: normal;
+      letter-spacing: 3px;
+      color: var(--muted);
+      vertical-align: super;
+    }
+
+    /* ── Main button ── */
+    #btn-push {
+      width: 148px; height: 148px;
+      border-radius: 50%;
+      border: 1.5px solid var(--dim);
+      background: var(--surface);
+      cursor: not-allowed;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 6px;
+      position: relative;
+      flex-shrink: 0;
+      transition: border-color 0.3s, box-shadow 0.3s, transform 0.15s;
+      outline: none;
+      overflow: hidden;
+    }
+    /* blob canvas inside button */
+    #blob-canvas {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      opacity: 0;
+      transition: opacity 0.5s;
+      pointer-events: none;
+    }
+    #btn-push.recording #blob-canvas,
+    #btn-push.speaking  #blob-canvas { opacity: 1; }
+
+    /* outer ring */
+    #btn-push::before {
+      content: '';
+      position: absolute; inset: -8px;
+      border-radius: 50%;
+      border: 1px solid transparent;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    /* inner ring */
+    #btn-push::after {
+      content: '';
+      position: absolute; inset: 10px;
+      border-radius: 50%;
+      border: 1px solid var(--dim);
+      transition: border-color 0.3s;
+    }
+
+    #btn-push .b-emoji { font-size: 2.8rem; line-height: 1; position: relative; z-index: 1; transition: transform 0.2s; }
+    #btn-push .b-label {
+      font-family: var(--font-mono);
+      font-size: 0.48rem; letter-spacing: 2.5px;
+      color: var(--muted); text-transform: uppercase;
+      position: relative; z-index: 1;
+      transition: color 0.25s;
+    }
+
+    /* READY state */
+    #btn-push.ready {
+      border-color: rgba(192,132,252,0.25);
+      box-shadow: 0 0 28px rgba(192,132,252,0.08);
+      cursor: pointer;
+    }
+    #btn-push.ready::before { border-color: rgba(192,132,252,0.1); }
+    #btn-push.ready .b-label { color: rgba(192,132,252,0.55); }
+
+    /* RECORDING state */
+    #btn-push.recording {
+      border-color: rgba(251,146,60,0.7);
+      box-shadow: 0 0 36px rgba(251,146,60,0.35);
+      transform: scale(0.95);
+    }
+    #btn-push.recording::before { border-color: rgba(251,146,60,0.3); box-shadow: 0 0 24px rgba(251,146,60,0.18); }
+    #btn-push.recording .b-label { color: var(--accent2); }
+    #btn-push.recording .b-emoji { animation: rec-pulse 0.9s ease-in-out infinite; }
+
+    /* SPEAKING state */
+    #btn-push.speaking {
+      border-color: rgba(192,132,252,0.5);
+      box-shadow: 0 0 48px rgba(192,132,252,0.25);
+      cursor: default;
+    }
+    #btn-push.speaking::before { border-color: rgba(192,132,252,0.2); animation: speak-ring 2s ease-in-out infinite; }
+    #btn-push.speaking .b-label { color: var(--accent); letter-spacing: 3px; }
+    #btn-push.speaking .b-emoji { animation: speak-bob 1.6s ease-in-out infinite; }
+
+    /* DISABLED */
+    #btn-push.busy { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+
+    @keyframes rec-pulse   { 0%,100%{transform:scale(1)}    50%{transform:scale(0.85)} }
+    @keyframes speak-bob   { 0%,100%{transform:scale(1)}    50%{transform:scale(1.1)}  }
+    @keyframes speak-ring  {
+      0%,100% { box-shadow: 0 0 16px rgba(192,132,252,0.12); }
+      50%     { box-shadow: 0 0 36px rgba(192,132,252,0.3); }
+    }
+    @keyframes blink-dot   { 50% { opacity: 0; } }
+
+    /* ── Emoji swap ── */
+    .b-emoji.out { opacity: 0; transform: scale(0.4) translateY(10px); transition: opacity 0.1s, transform 0.1s; }
+    .b-emoji.in  { opacity: 1; transform: scale(1)   translateY(0);    transition: opacity 0.18s 0.08s, transform 0.18s 0.08s; }
+
+    /* ── Visualizer ── */
+    .viz {
+      display: flex; align-items: flex-end; justify-content: center;
+      gap: 4px; height: 48px; width: 160px; flex-shrink: 0;
+    }
+    .bar {
+      width: 8px; height: 8px; min-height: 4px;
+      background: linear-gradient(to top, var(--accent2), var(--accent));
+      box-shadow: 0 0 6px rgba(192,132,252,0.3);
+      border-radius: 2px 2px 0 0;
+      transition: height 0.06s ease;
+      flex-shrink: 0;
+    }
+
+    /* ── Status text ── */
+    #status {
+      font-family: var(--font-mono);
+      font-size: 0.7rem; letter-spacing: 2px;
+      color: var(--muted); text-transform: uppercase;
+      min-height: 18px; flex-shrink: 0;
+      transition: color 0.3s;
+    }
+    #status.active { color: var(--accent2); }
+    #status.rec    { color: var(--danger); }
+    #status.speak  { color: var(--accent); }
+
+    /* ── Response box ── */
+    #resp-wrap {
+      width: 86%; max-width: 380px;
+      max-height: 110px;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+      flex-shrink: 0;
+      scrollbar-width: thin;
+      scrollbar-color: var(--dim) transparent;
+    }
+    #resp-wrap::-webkit-scrollbar       { width: 2px; }
+    #resp-wrap::-webkit-scrollbar-thumb { background: var(--dim); }
+
+    #resp-text {
+      font-family: var(--font-ui);
+      font-size: 0.95rem; font-weight: 300;
+      color: var(--accent);
+      text-align: center;
+      line-height: 1.65;
+      word-break: break-word;
+      transition: color 0.3s;
+    }
+    #resp-text.typing::after {
+      content: '▋';
+      display: inline-block;
+      color: var(--accent2);
+      margin-left: 2px;
+      animation: blink-cursor 0.7s step-end infinite;
+    }
+    @keyframes blink-cursor { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── Transcript chip ── */
+    #transcript-chip {
+      font-family: var(--font-mono);
+      font-size: 0.6rem; letter-spacing: 1px;
+      color: var(--muted);
+      opacity: 0;
+      transition: opacity 0.4s;
+      min-height: 14px;
+      text-align: center;
+      width: 86%; max-width: 380px;
+      text-overflow: ellipsis; overflow: hidden; white-space: nowrap;
+    }
+    #transcript-chip.show { opacity: 1; }
+
+    /* ── Intent badge ── */
+    #intent-badge {
+      position: fixed; bottom: 20px; right: 16px;
+      font-family: var(--font-mono);
+      font-size: 0.5rem; letter-spacing: 2px;
+      color: var(--muted);
+      border: 1px solid var(--dim);
+      padding: 4px 10px; border-radius: 20px;
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    #intent-badge.show { opacity: 1; }
+
+    /* ── Corner decoration top-right ── */
+    .deco-corner {
+      position: fixed; top: -60px; right: -60px;
+      width: 220px; height: 220px;
+      background: radial-gradient(circle, rgba(251,146,60,0.07) 0%, transparent 70%);
+      pointer-events: none;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+
+<div class="deco-corner"></div>
+
+<div id="ws-status"><div class="dot"></div><span>connecting</span></div>
+
+<div class="mic-wrap" id="mic-wrap">
+  <span id="mic-label">tap to allow mic</span>
+  <div id="mic-dot"></div>
+</div>
+
+<h1>OTTO</h1>
+
+<button id="btn-push" disabled>
+  <canvas id="blob-canvas" width="148" height="148"></canvas>
+  <span class="b-emoji" id="b-emoji">🤖</span>
+  <span class="b-label" id="b-label">IZINKAN MIC</span>
+</button>
+
+<div id="status">Menginisialisasi sistem...</div>
+
+<div class="viz" id="viz">
+  <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+  <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+  <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+  <div class="bar"></div>
+</div>
+
+<div id="transcript-chip"></div>
+<div id="resp-wrap"><div id="resp-text">...</div></div>
+
+<div id="intent-badge"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  OTTO Interface — disesuaikan dengan protocol app.py
+//  WS path  : /ws
+//  Protocol :
+//    TX → { type: "text",  data: "teks" }
+//         { type: "audio", data: "<base64 PCM>" }
+//         { type: "ping" }
+//    RX ← { type: "transcript", data: "..." }
+//         { type: "response",   data: "...", audio: "<base64 WAV>", meta: {intent, skill} }
+//         { type: "error",      data: "..." }
+//         { type: "pong" }
+// ══════════════════════════════════════════════════════
+
+const WS_RETRY_DELAY = 5000;
+const WS_MAX_RETRY   = 8;
+const SAMPLE_RATE    = 22050;
+
+// ── DOM refs ─────────────────────────────────────────
+const btn          = document.getElementById('btn-push');
+const bEmoji       = document.getElementById('b-emoji');
+const bLabel       = document.getElementById('b-label');
+const statusEl     = document.getElementById('status');
+const respEl       = document.getElementById('resp-text');
+const respWrap     = document.getElementById('resp-wrap');
+const vizBox       = document.getElementById('viz');
+const micDot       = document.getElementById('mic-dot');
+const micLabel     = document.getElementById('mic-label');
+const micWrap      = document.getElementById('mic-wrap');
+const wsStatusEl   = document.getElementById('ws-status');
+const wsStatusTxt  = wsStatusEl.querySelector('span');
+const transcript   = document.getElementById('transcript-chip');
+const intentBadge  = document.getElementById('intent-badge');
+
+// ── State ─────────────────────────────────────────────
+let audioCtx      = null;
+let micStream     = null;
+let mediaRecorder = null;
+let chunks        = [];
+let isMicGranted  = false;
+
+let ws            = null;
+let wsRetry       = 0;
+let wsIntentClose = false;
+
+let animId        = null;
+let emojiRafId    = null;
+let typingRafId   = null;
+let intentTimer   = null;
+
+let typingText    = '';
+let typingStart   = 0;
+let typingDur     = 0;
+
+// ══════════════════════════════════════════════════════
+//  EMOJI MAP — tetap dipertahankan dari Libo, disesuaikan Otto
+// ══════════════════════════════════════════════════════
+const EMOJI_MAP = [
+  { k: ['siap, bos','siap bos','baik bos'],              e: '🫡', l: 'SIAP'      },
+  { k: ['segera','langsung'],                             e: '⚡', l: 'LANGSUNG'  },
+  { k: ['selesai','sudah dilakukan'],                     e: '✅', l: 'SELESAI'   },
+  { k: ['maaf','mohon maaf'],                             e: '🫣', l: 'MAAF'      },
+  { k: ['aku catat','aku ingat','tidak akan'],            e: '📌', l: 'MENCATAT'  },
+  { k: ['mencatat','menyimpan','disimpan'],               e: '✍️', l: 'MENYIMPAN' },
+  { k: ['menganalisis','berpikir','memproses'],           e: '🧠', l: 'BERPIKIR'  },
+  { k: ['menunggu','harap tunggu'],                       e: '⏳', l: 'TUNGGU'    },
+  { k: ['berikut adalah','ini hasilnya','ini datanya'],   e: '📋', l: 'DATA'      },
+  { k: ['dibuka','membuka','aktif'],                      e: '🔓', l: 'DIBUKA'    },
+  { k: ['ditutup','menutup','dimatikan'],                 e: '🔒', l: 'DITUTUP'   },
+  { k: ['reload','dimuat ulang'],                         e: '🔄', l: 'RELOAD'    },
+  { k: ['lagu','musik','spotify'],                        e: '🎵', l: 'MUSIK'     },
+  { k: ['youtube','video'],                               e: '▶️', l: 'VIDEO'    },
+  { k: ['google','mencari','pencarian'],                  e: '🔍', l: 'CARI'      },
+  { k: ['pengingat','ingatkan','reminder'],               e: '⏰', l: 'REMINDER'  },
+  { k: ['adzan','sholat','shalat'],                       e: '🕌', l: 'SHOLAT'    },
+  { k: ['jam','pukul','waktu sekarang'],                  e: '🕐', l: 'JAM'       },
+  { k: ['catatan','catat'],                               e: '📝', l: 'CATAT'     },
+  // profil / observasi — karakter khusus Otto
+  { k: ['yang aku amati','pola kamu','kebiasaanmu','yang aku pelajari'], e: '🪞', l: 'AMATI' },
+  { k: ['hipotesis','siklus','observasi'],                e: '🔬', l: 'ANALISIS'  },
+  { k: ['ringkasan','rekap','laporan'],                   e: '📊', l: 'REKAP'     },
+  { k: ['nasihat','saran','masukan'],                     e: '💡', l: 'IDE'       },
+  { k: ['bisnis','outlet','usaha'],                       e: '🏪', l: 'BISNIS'    },
+  { k: ['selamat pagi'],                                  e: '🌅', l: 'PAGI'      },
+  { k: ['selamat siang'],                                 e: '🌤️', l: 'SIANG'   },
+  { k: ['selamat sore'],                                  e: '🌇', l: 'SORE'      },
+  { k: ['selamat malam'],                                 e: '🌙', l: 'MALAM'     },
+  { k: ['halo','hai','apa kabar'],                        e: '👋', l: 'HALO'      },
+  { k: ['error','gagal','ada masalah'],                   e: '😟', l: 'ERROR'     },
+  { k: ['tidak mendengar','tidak ada suara'],             e: '🤫', l: 'HENING'    },
+  { k: ['tidak tahu','belum','belum bisa'],               e: '🫠', l: 'BINGUNG'   },
+  { k: ['senang','bagus','keren','mantap'],               e: '😄', l: 'SENANG'    },
+];
+
+const STATE_EMOJI = {
+  IDLE     : { e: '🎙️', l: 'TAHAN BICARA' },
+  RECORDING: { e: '👂',  l: 'LEPAS KIRIM'  },
+  THINKING : { e: '⚙️', l: 'MEMPROSES'    },
+  SPEAKING : { e: '🗣️', l: 'OTTO BICARA'  },
+  INIT     : { e: '🤖',  l: 'IZINKAN MIC'  },
+};
+
+function emojiFromText(text) {
+  if (!text) return null;
+  const t = text.toLowerCase();
+  for (const entry of EMOJI_MAP) {
+    if (entry.k.some(k => t.includes(k))) return entry;
+  }
+  return null;
+}
+
+// ── Emoji swap animation ──────────────────────────────
+let _curEmoji = '';
+function setEmoji(e, l) {
+  if (e === _curEmoji) { if (l) bLabel.textContent = l; return; }
+  _curEmoji = e;
+  bEmoji.classList.remove('in');
+  bEmoji.classList.add('out');
+  setTimeout(() => {
+    bEmoji.textContent = e;
+    if (l) bLabel.textContent = l;
+    bEmoji.classList.remove('out');
+    bEmoji.classList.add('in');
+  }, 110);
+}
+
+// ── Emoji loop synced to audio playback ──────────────
+function startEmojiLoop(text, dur) {
+  stopEmojiLoop();
+  if (!text) return;
+  const SEG = 10;
+  const segLen = Math.max(1, Math.floor(text.length / SEG));
+  const sched = [];
+  for (let i = 0; i < SEG; i++) {
+    const slice = text.substring(i * segLen, Math.min((i + 2) * segLen, text.length));
+    const res = emojiFromText(slice);
+    if (res) sched.push({ t: (i / SEG) * dur, e: res.e, l: res.l });
+  }
+  if (!sched.length) {
+    const fb = emojiFromText(text);
+    sched.push(fb ? { t: 0, e: fb.e, l: fb.l } : { t: 0, e: '🗣️', l: 'OTTO BICARA' });
+  }
+  let idx = 0;
+  function frame() {
+    const elapsed = audioCtx.currentTime - typingStart;
+    while (idx < sched.length && elapsed >= sched[idx].t) {
+      setEmoji(sched[idx].e, sched[idx].l);
+      idx++;
+    }
+    if (elapsed < dur) emojiRafId = requestAnimationFrame(frame);
+    else { stopEmojiLoop(); setEmoji(STATE_EMOJI.IDLE.e, STATE_EMOJI.IDLE.l); }
+  }
+  emojiRafId = requestAnimationFrame(frame);
+}
+function stopEmojiLoop() {
+  if (emojiRafId) { cancelAnimationFrame(emojiRafId); emojiRafId = null; }
+}
+
+// ── Typing animation ──────────────────────────────────
+function startTyping() {
+  stopTyping();
+  function frame() {
+    if (!typingText) return;
+    const elapsed  = audioCtx.currentTime - typingStart;
+    const progress = Math.min(elapsed / typingDur, 1) * 0.95;
+    const target   = Math.floor(progress * typingText.length);
+    if (target > respEl.textContent.length) {
+      respEl.textContent = typingText.substring(0, target);
+      respWrap.scrollTop = respWrap.scrollHeight;
+    }
+    if (elapsed < typingDur) typingRafId = requestAnimationFrame(frame);
+    else {
+      respEl.textContent = typingText;
+      respEl.classList.remove('typing');
+      typingText = '';
+    }
+  }
+  typingRafId = requestAnimationFrame(frame);
+}
+function stopTyping() {
+  if (typingRafId) { cancelAnimationFrame(typingRafId); typingRafId = null; }
+}
+
+// ── AudioContext ──────────────────────────────────────
+async function ensureAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+}
+
+// ══════════════════════════════════════════════════════
+//  Putar WAV base64 dari respons Otto (app.py format)
+// ══════════════════════════════════════════════════════
+async function playResponseAudio(b64wav, text) {
+  if (!b64wav) {
+    // Tidak ada audio — tampilkan teks saja
+    respEl.textContent = text || '';
+    respEl.classList.remove('typing');
+    return;
+  }
+
+  await ensureAudioCtx();
+
+  // Decode base64 → ArrayBuffer
+  const binary  = atob(b64wav);
+  const bytes   = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+  let audioBuffer;
+  try {
+    audioBuffer = await audioCtx.decodeAudioData(bytes.buffer);
+  } catch(e) {
+    console.warn('Audio decode gagal:', e);
+    respEl.textContent = text || '';
+    return;
+  }
+
+  typingDur   = audioBuffer.duration;
+  typingStart = audioCtx.currentTime;
+  typingText  = text || '';
+
+  const barEls   = document.querySelectorAll('.bar');
+  const analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 32;
+  const dataArr  = new Uint8Array(analyser.frequencyBinCount);
+  const source   = audioCtx.createBufferSource();
+  const gain     = audioCtx.createGain();
+
+  source.buffer = audioBuffer;
+  source.connect(gain);
+  gain.connect(analyser);
+  analyser.connect(audioCtx.destination);
+
+  // Fade-out tail
+  gain.gain.setValueAtTime(1.0, typingStart);
+  gain.gain.setTargetAtTime(0, typingStart + typingDur + 0.05, 0.25);
+
+  source.onended = () => {
+    vizBox.classList.remove('talking');
+    barEls.forEach(b => b.style.height = '8px');
+    btn.classList.remove('speaking', 'busy');
+    btn.classList.add('ready');
+    stopEmojiLoop();
+    stopTyping();
+    if (typingText) { respEl.textContent = typingText; respEl.classList.remove('typing'); typingText = ''; }
+    setEmoji(STATE_EMOJI.IDLE.e, STATE_EMOJI.IDLE.l);
+    setStatus('standby', '⏳ Standby');
+  };
+
+  source.start(0);
+
+  // Button state
+  btn.classList.add('speaking');
+  btn.classList.remove('recording', 'busy');
+
+  // Typing
+  if (typingText) {
+    respEl.textContent = '';
+    respEl.classList.add('typing');
+    respWrap.scrollTop = 0;
+    startTyping();
+  }
+
+  // Emoji loop
+  startEmojiLoop(typingText, typingDur);
+
+  // Visualizer
+  vizBox.classList.add('talking');
+  setStatus('speak', '🔊 Otto Berbicara...');
+
+  if (animId) cancelAnimationFrame(animId);
+  function loopViz() {
+    if (!vizBox.classList.contains('talking')) { animId = null; return; }
+    analyser.getByteFrequencyData(dataArr);
+    barEls.forEach((bar, i) => {
+      const si = Math.floor((i / barEls.length) * dataArr.length);
+      bar.style.height = `${8 + (dataArr[si] / 255) * 60}px`;
+    });
+    animId = requestAnimationFrame(loopViz);
+  }
+  loopViz();
+}
+
+// ══════════════════════════════════════════════════════
+//  WebSocket — protocol sesuai app.py Otto
+// ══════════════════════════════════════════════════════
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+  ws = new WebSocket(`${proto}${location.host}/ws`);
+
+  let _pingInterval = null;
+  ws.onopen = () => {
+    wsRetry = 0;
+    setWsStatus('connected', 'online');
+    if (!isMicGranted) setStatus('', 'Ketuk lingkaran mic untuk mulai');
+    if (_pingInterval) clearInterval(_pingInterval);
+    _pingInterval = setInterval(() => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({type:'ping'})); }, 20000);
+  };
+
+  ws.onclose = () => {
+    setWsStatus('disconnected', 'offline');
+    if (wsIntentClose) return;
+    if (wsRetry >= WS_MAX_RETRY) { setWsStatus('disconnected','gagal terhubung'); return; }
+    wsRetry++;
+    setWsStatus('reconnecting', `reconnect ${wsRetry}...`);
+    setTimeout(connectWS, WS_RETRY_DELAY);
+  };
+
+  ws.onerror = () => {};
+
+  ws.onmessage = async (event) => {
+    let msg;
+    try { msg = JSON.parse(event.data); } catch { return; }
+
+    switch (msg.type) {
+
+      case 'pong':
+        break;
+
+      case 'transcript':
+        // Tampilkan transkrip STT sementara
+        transcript.textContent = '» ' + msg.data;
+        transcript.classList.add('show');
+        setTimeout(() => transcript.classList.remove('show'), 5000);
+        break;
+
+      case 'response':
+        btn.classList.remove('busy');
+        // Tampilkan intent badge
+        if (msg.meta && msg.meta.intent) showIntent(msg.meta.intent, msg.meta.skill);
+        // Putar audio (jika ada) + typing
+        await playResponseAudio(msg.audio || '', msg.data || '');
+        break;
+
+      case 'error':
+        setStatus('', '⚠️ ' + (msg.data || 'Error'));
+        respEl.textContent = msg.data || 'Terjadi kesalahan.';
+        btn.classList.remove('busy', 'recording');
+        btn.classList.add('ready');
+        setEmoji(STATE_EMOJI.IDLE.e, STATE_EMOJI.IDLE.l);
+        break;
+    }
+  };
+}
+
+// ── Intent badge ──────────────────────────────────────
+function showIntent(intent, skill) {
+  clearTimeout(intentTimer);
+  intentBadge.textContent = skill ? `${intent} · ${skill}` : intent;
+  intentBadge.classList.add('show');
+  intentTimer = setTimeout(() => intentBadge.classList.remove('show'), 4000);
+}
+
+// ══════════════════════════════════════════════════════
+//  Mic init
+// ══════════════════════════════════════════════════════
+async function initMic() {
+  if (isMicGranted) return;
+  try {
+    micStream    = await navigator.mediaDevices.getUserMedia({ audio: true });
+    isMicGranted = true;
+    await ensureAudioCtx();
+    micDot.classList.add('granted');
+    micLabel.textContent = 'mic aktif';
+    btn.removeAttribute('disabled');
+    btn.classList.add('ready');
+    setEmoji(STATE_EMOJI.IDLE.e, STATE_EMOJI.IDLE.l);
+    setStatus('', '⏳ Standby');
+  } catch {
+    setStatus('', '❌ Izin mic ditolak');
+    alert('Mohon izinkan akses mikrofon agar Otto bisa mendengar.');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  Rekam → kirim ke Otto
+//  Mode: record WebM → blob → base64 → WS JSON
+// ══════════════════════════════════════════════════════
+async function startRec() {
+  if (!isMicGranted || btn.classList.contains('speaking') || btn.classList.contains('busy')) return;
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    setStatus('', '⚠️ Belum terhubung ke Otto'); return;
+  }
+  await ensureAudioCtx();
+
+  respEl.textContent = '...';
+  respEl.classList.remove('typing');
+  stopTyping(); stopEmojiLoop();
+  transcript.classList.remove('show');
+  chunks = [];
+
+  try {
+    mediaRecorder = new MediaRecorder(micStream, { mimeType: 'audio/webm;codecs=opus' });
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      const blob   = new Blob(chunks, { type: 'audio/webm' });
+      const b64    = await blobToBase64(blob);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'audio', data: b64 }));
+        btn.classList.add('busy');
+        btn.classList.remove('recording');
+        setEmoji(STATE_EMOJI.THINKING.e, STATE_EMOJI.THINKING.l);
+        setStatus('active', '⚙️ Memproses...');
+      }
+    };
+    mediaRecorder.start();
+    btn.classList.add('recording');
+    btn.classList.remove('ready');
+    setEmoji(STATE_EMOJI.RECORDING.e, STATE_EMOJI.RECORDING.l);
+    setStatus('rec', '🔴 Mendengarkan...');
+  } catch {
+    setStatus('', '❌ Gagal mengakses mic');
+  }
+}
+
+function stopRec() {
+  if (!isMicGranted) return;
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+    if (navigator.vibrate) navigator.vibrate(15);
+    btn.classList.remove('recording');
+    btn.classList.add('ready');
+  }
+}
+
+function blobToBase64(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(new Error('FileReader gagal'));
+    r.readAsDataURL(blob);
+  });
+}
+
+// ── UI helpers ────────────────────────────────────────
+function setStatus(cls, text) {
+  statusEl.className = cls || '';
+  statusEl.textContent = text;
+}
+
+function setWsStatus(cls, text) {
+  wsStatusEl.className = cls;
+  wsStatusTxt.textContent = text;
+}
+
+// ── Events ─────────────────────────────────────────────
+micWrap.addEventListener('click',    initMic);
+micWrap.addEventListener('touchend', e => { e.preventDefault(); initMic(); });
+
+btn.addEventListener('mousedown',  startRec);
+btn.addEventListener('mouseup',    stopRec);
+btn.addEventListener('touchstart', e => { e.preventDefault(); startRec(); });
+btn.addEventListener('touchend',   e => { e.preventDefault(); stopRec(); });
+
+respWrap.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+respWrap.addEventListener('touchmove',  e => e.stopPropagation(), { passive: true });
+
+// ── Blob canvas animation ─────────────────────────────
+(function() {
+  const canvas = document.getElementById('blob-canvas');
+  const ctx    = canvas.getContext('2d');
+  const W = 148, H = 148, CX = W/2, CY = H/2;
+  let t = 0, blobRafId = null;
+
+  const BLOBS_REC = [
+    { r: 38, speed: 0.018, ox: 0.6, oy: 0.5, color: 'rgba(251,146,60,0.18)' },
+    { r: 30, speed: 0.025, ox: 0.4, oy: 0.7, color: 'rgba(251,146,60,0.12)' },
+    { r: 24, speed: 0.031, ox: 0.5, oy: 0.3, color: 'rgba(192,132,252,0.1)'  },
+  ];
+  const BLOBS_SPK = [
+    { r: 36, speed: 0.015, ox: 0.5, oy: 0.5, color: 'rgba(192,132,252,0.18)' },
+    { r: 28, speed: 0.022, ox: 0.6, oy: 0.4, color: 'rgba(192,132,252,0.13)' },
+    { r: 22, speed: 0.029, ox: 0.4, oy: 0.6, color: 'rgba(251,146,60,0.09)'  },
+  ];
+
+  function drawBlob(cx, cy, r, points, color) {
+    ctx.beginPath();
+    const step = (Math.PI * 2) / points;
+    for (let i = 0; i <= points; i++) {
+      const angle = i * step;
+      const wobble = 1 + 0.22 * Math.sin(i * 2.3 + t * 1.7) + 0.1 * Math.cos(i * 3.7 + t * 2.1);
+      const x = cx + Math.cos(angle) * r * wobble;
+      const y = cy + Math.sin(angle) * r * wobble;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  function loopBlob() {
+    const isRec = btn.classList.contains('recording');
+    const isSpk = btn.classList.contains('speaking');
+    if (!isRec && !isSpk) { blobRafId = null; ctx.clearRect(0,0,W,H); return; }
+    ctx.clearRect(0, 0, W, H);
+    t += 0.016;
+    const blobs = isRec ? BLOBS_REC : BLOBS_SPK;
+    blobs.forEach((b, i) => {
+      const ox = CX + Math.sin(t * b.speed * 40 + i) * 14 * b.ox;
+      const oy = CY + Math.cos(t * b.speed * 35 + i) * 14 * b.oy;
+      drawBlob(ox, oy, b.r, 8, b.color);
+    });
+    blobRafId = requestAnimationFrame(loopBlob);
+  }
+
+  // Watch for class changes on btn to trigger blob
+  const observer = new MutationObserver(() => {
+    const isActive = btn.classList.contains('recording') || btn.classList.contains('speaking');
+    if (isActive && !blobRafId) loopBlob();
+  });
+  observer.observe(btn, { attributes: true, attributeFilter: ['class'] });
+})();
+
+// ── Boot ──────────────────────────────────────────────
+connectWS();
+</script>
+</body>
+</html>

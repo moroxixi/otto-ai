@@ -1,0 +1,30 @@
+# Environment
+.env
+
+# Data runtime (jangan di-commit)
+data/
+ssl/
+
+
+venv/
+.env
+data/*.json
+ssl/
+memory/.store/
+
+# Audio & model besar
+voices/
+*.wav
+*.mp3
+*.onnx
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+
+# Output Claude
+otto_for_claude.txt
+venv/
