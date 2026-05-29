@@ -2,8 +2,6 @@
 # otto-push.sh — Auto commit & push otto-ai ke GitHub
 # Simpan ke: /data/asd/otto-ai/otto-push.sh
 # chmod +x otto-push.sh
-# Jalankan manual: bash otto-push.sh
-# Atau jadwalkan via cron / systemd timer
 
 OTTO_DIR="/data/asd/otto-ai"
 LOG="$OTTO_DIR/otto.log"
@@ -15,6 +13,28 @@ SSH_AGENT_SOCK=$(ls /home/xyz/.ssh/agent/s.*.agent.* 2>/dev/null | head -1)
 if [ -n "$SSH_AGENT_SOCK" ]; then
     export SSH_AUTH_SOCK="$SSH_AGENT_SOCK"
 fi
+
+# ── Cek syntax semua file Python sebelum commit ───────────────────────────
+SYNTAX_ERRORS=""
+while IFS= read -r -d '' pyfile; do
+    ERR=$(python3 -m py_compile "$pyfile" 2>&1)
+    if [ $? -ne 0 ]; then
+        SYNTAX_ERRORS+="$pyfile: $ERR\n"
+    fi
+done < <(find "$OTTO_DIR" -name "*.py" -not -path "*/venv/*" -print0)
+
+if [ -n "$SYNTAX_ERRORS" ]; then
+    echo "$(date '+%H:%M') [Syntax] ERROR ditemukan:" >> "$LOG"
+    echo -e "$SYNTAX_ERRORS" >> "$LOG"
+    # Tampilkan error langsung di terminal
+    echo ""
+    echo "❌ SyntaxError — push dibatalkan:"
+    echo -e "$SYNTAX_ERRORS"
+    notify-send "Otto" "❌ SyntaxError! Push dibatalkan — cek terminal" --urgency=critical 2>/dev/null
+    exit 1
+fi
+
+echo "$(date '+%H:%M') [Syntax] Semua file Python OK." >> "$LOG"
 
 # ── Cek apakah ada perubahan ───────────────────────────────────────────────
 if [ -z "$(git status --porcelain)" ]; then
@@ -31,8 +51,7 @@ else
     echo "$(date '+%H:%M') [Tree] generate_tree.sh tidak ditemukan, skip." >> "$LOG"
 fi
 
-# ── Regenerate otto_for_claude.txt (context file) ─────────────────────────
-# Opsional: jalankan script context generator jika ada
+# ── Regenerate otto_for_claude.txt ────────────────────────────────────────
 if [ -f "$OTTO_DIR/generate_context.sh" ]; then
     bash "$OTTO_DIR/generate_context.sh" >> "$LOG" 2>&1
     echo "$(date '+%H:%M') [Context] otto_for_claude.txt diperbarui." >> "$LOG"
@@ -40,14 +59,22 @@ fi
 
 # ── Commit & push ─────────────────────────────────────────────────────────
 git add -A
-git commit -m "auto: $(date '+%Y-%m-%d %H:%M')"
-git push origin main >> "$LOG" 2>&1
+COMMIT_MSG="auto: $(date '+%Y-%m-%d %H:%M')"
+git commit -m "$COMMIT_MSG"
 
-# ── Cek hasil push ────────────────────────────────────────────────────────
-if [ $? -eq 0 ]; then
-    echo "$(date '+%H:%M') [Git] Push berhasil." >> "$LOG"
+PUSH_OUTPUT=$(git push origin main 2>&1)
+PUSH_STATUS=$?
+echo "$PUSH_OUTPUT" >> "$LOG"
+
+if [ $PUSH_STATUS -eq 0 ]; then
+    echo "$(date '+%H:%M') [Git] Push berhasil: $COMMIT_MSG" >> "$LOG"
+    echo "✅ Push berhasil: $COMMIT_MSG"
     notify-send "Otto" "📤 Otto-AI di-push ke GitHub" --urgency=low 2>/dev/null
 else
-    echo "$(date '+%H:%M') [Git] Push GAGAL — cek koneksi atau SSH key." >> "$LOG"
-    notify-send "Otto" "❌ Push gagal! Cek otto.log" --urgency=critical 2>/dev/null
+    echo "$(date '+%H:%M') [Git] Push GAGAL:" >> "$LOG"
+    echo "$PUSH_OUTPUT" >> "$LOG"
+    echo ""
+    echo "❌ Push GAGAL:"
+    echo "$PUSH_OUTPUT"
+    notify-send "Otto" "❌ Push gagal! $PUSH_OUTPUT" --urgency=critical 2>/dev/null
 fi

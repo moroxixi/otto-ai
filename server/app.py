@@ -209,7 +209,6 @@ async def websocket_endpoint(ws: WebSocket):
                 await _send_error(ws, f"Tipe pesan '{msg_type}' tidak dikenal.")
 
     except WebSocketDisconnect:
-        global active_ws
         active_ws = None
         logger.info("[ws] Client disconnect: %s", client)
     except Exception as e:
