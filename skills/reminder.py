@@ -69,7 +69,7 @@ async def _notify(judul: str, pesan: str) -> None:
     await _run(f'{NTFY_BRIDGE} "Pengingat!" "{pesan}" 2>/dev/null || true')
 
     # 3. TTS
-    tts_text = f"Bos Rofi, ini pengingat untuk: {pesan}."
+    tts_text = f"Rofi, ini pengingat untuk: {pesan}."
     tts_cmd  = (
         f'echo "{tts_text}" | {PIPER_BIN} '
         f'--model {VOICE_MODEL} '
