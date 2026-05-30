@@ -67,10 +67,22 @@ curiosity = None
 scheduler = None
 active_ws: WebSocket | None = None
 
+
+
+_SKILL_REGISTER_FN = {
+    "skills.system":   "register_system_skills",
+    "skills.media":    "register_media_skills",
+    "skills.reminder": "register_reminder_skills",
+}
+
+
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Init semua komponen saat server start, cleanup saat stop."""
     global brain, transcriber, speaker, executor
+    global watcher, profiler, curiosity, scheduler 
 
     logging.basicConfig(
         level   = logging.DEBUG if DEBUG else logging.INFO,
@@ -125,26 +137,20 @@ def _load_skills(ex: Executor) -> None:
     Setiap modul skill mendaftarkan dirinya ke executor saat di-import.
     Jika modul belum ada, skip dengan peringatan — tidak crash.
     """
-    skill_modules = [
-        "skills.system",
-        "skills.media",
-        "skills.reminder",
-    ]
-    for mod_name in skill_modules:
+
+    for mod_name, fn_name in _SKILL_REGISTER_FN.items():
         try:
             import importlib
             mod = importlib.import_module(mod_name)
-            # Skill yang punya fungsi register() → panggil dengan executor
-            if hasattr(mod, "register"):
-                mod.register(ex)
+            if hasattr(mod, fn_name):
+                getattr(mod, fn_name)(ex)
                 logger.info("  ✓ Skill '%s' dimuat", mod_name)
             else:
-                logger.debug("  ○ '%s' tidak punya register(), skip", mod_name)
+                logger.warning("  ✗ '%s' tidak punya %s()", mod_name, fn_name)
         except ModuleNotFoundError:
             logger.warning("  ✗ Skill '%s' belum ada, skip", mod_name)
         except Exception as e:
-            logger.error("  ✗ Skill '%s' error saat load: %s", mod_name, e)
-
+            logger.error("  ✗ Skill '%s' error: %s", mod_name, e)
 
 # ─────────────────────────── App ─────────────────────────────────────────────
 

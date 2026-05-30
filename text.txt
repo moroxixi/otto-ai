@@ -1,87 +1,19 @@
-Oke, ini rencana bersih Otto
-## Filosofi Otto
+3 Bug kritis (akan crash saat runtime):
 
-Libo: *"Rofi suka kopi oat, Rofi punya 4 cabang..."* → hardcoded di file
-Otto: *Mengamati → bertanya untuk mengenal lebih dalam → Menyimpulkan → Bertanya → Merevisi* → seperti manusia mengenal manusia
+Bug 1 — `core/brain.py`: `otto_self = self_summary_text()` di-generate tapi tidak dimasukkan ke return. `_build_system_prompt` return tanpa menyertakan `otto_self`. Selain itu, import `from self.model import self_summary_text` akan gagal karena `self` adalah keyword Python — nama folder/module `self` bentrok dengan built-in. Harus diganti misal `from otto_self.model import ...` atau `from . import` dengan struktur package yang benar.
 
----
+Bug 2 — `server/app.py`: `watcher`, `profiler`, `curiosity`, `scheduler` dideklarasikan lokal di dalam `lifespan()` tapi dipakai di `_handle_text()` dan `_broadcast_curiosity_with_pending()` sebagai global. Harus ditambah `global watcher, profiler, curiosity, scheduler` di dalam `lifespan()`.
 
-## Yang Perlu Dibuat Pertama
+Bug 3 — `server/app.py` + `core/memory.py`: `app.py` memanggil `memory.get_temp()`, `memory.set_temp()`, dan `memory.delete_temp()` — tapi tiga method ini tidak ada di `core/memory.py`.
 
-Urutan ini penting — jangan lompat:
+3 Warning (tidak crash tapi perilaku salah):
 
-**1. Fondasi dulu (tidak bisa jalan tanpa ini)**
-```
-core/config.py      → konstanta & path
-core/memory.py      → shortcut learning
-core/transcriber.py → Whisper STT  
-core/speaker.py     → Piper TTS
-core/brain.py       → LLM engine
-core/executor.py    → dispatcher aksi
-```
+Warning 4 — `skills/reminder.py`: `VOICE_MODEL` masih pakai path lama `libo-ai`: `/data/asd/libo-ai/voices/...` — harus `/data/asd/otto-ai/voices/...`.
 
-**2. Server (interface HP)**
-```
-server/app.py
-server/websocket.py
-server/static/index.html
-```
+Warning 5 — `server/app.py` `_load_skills()`: Memanggil `mod.register(ex)` tapi skill modules mengekspos fungsi bernama `register_system_skills()`, `register_media_skills()`, `register_reminder_skills()`. Nama tidak match, skills tidak akan pernah terdaftar.
 
-**3. Skills dasar (agar bisa perintah)**
-```
-skills/system.py    → volume, lock, shutdown, dll
-skills/media.py     → putar lagu
-skills/reminder.py  → ingatkan_aku
-```
-
-**4. Intelligence (yang membuat Otto "hidup")**
-```
-intelligence/activity_watcher.py  → amati dulu, simpulkan nanti
-intelligence/profiler.py          → bangun model Rofi dari nol
-intelligence/curiosity.py         → versi baru: observe → ask to know → hypothesize → ask
-intelligence/scheduler.py
-```
-
-**5. Self (kesadaran Otto)**
-```
-self/model.py
-self/github_checker.py
-```
-
----
+Warning 6 — `core/brain.py`: `otto_self` digenerate tapi tidak dipakai — `_BASE_SYSTEM` tidak punya placeholder `{self_section}` sehingga self-awareness Otto tidak pernah masuk ke system prompt.
 
 
-## Konteks untuk Chat Baru
 
-Salin teks ini persis ke chat baru:
-
----
-
-**OTTO-AI — Mulai dari nol**
-
-Struktur folder sudah dibuat di `/data/asd/otto-ai/`
-
-**Filosofi Otto:**
-- Otto tidak punya file yang mendikte siapa Rofi
-- Otto mengamati perilaku → bertanya untuk mengenal lebih dalam → membentuk hipotesis → bertanya untuk verifikasi
-- Jika jawaban salah → revisi model internal
-- Otto belajar seperti manusia mengenal manusia baru
-
-**Yang sudah ada:**
-- `.env` dengan API keys (Groq + GitHub(tapi belum diisi untuk folder baru ini))
-- `voices/id_ID-news_tts-medium.onnx` model TTS
-- Semua folder kosong siap diisi
-
-**Stack teknis:**
-- OS: openSUSE Tumbleweed, Hyprland, Wayland
-- Audio: PipeWire (pw-record, pw-play), speaker laptop sink ID 58
-- STT: faster-whisper (tiny untuk perintah pendek, medium untuk panjang)
-- LLM: Groq API (llama-3.1-8b-instant untuk perintah, llama-3.3-70b untuk ngobrol)
-- TTS: Piper binary di `/usr/local/bin/piper`
-- Server: FastAPI + uvicorn port 8000, HTTPS self-signed SSL
-- Interface: WebSocket dari iPhone chrome
-
-**Mulai dari: `core/config.py` dulu**
-
----
-
+beri tahu aku fix nya dengan contoh sebelum dan sesudah

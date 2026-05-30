@@ -40,7 +40,7 @@ logger = logging.getLogger("otto.skills.reminder")
 # ─────────────────────────── Konfigurasi ────────────────────────────────────
 
 PIPER_BIN   = "/usr/local/bin/piper"
-VOICE_MODEL = "/data/asd/libo-ai/voices/id_ID-news_tts-medium.onnx"
+VOICE_MODEL = "/data/asd/otto-ai/voices/id_ID-news_tts-medium.onnx"
 AUDIO_SINK  = 58
 NTFY_BRIDGE = "/root/.local/bin/ntfy-bridge.sh"  # sesuaikan jika perlu
 

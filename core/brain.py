@@ -24,7 +24,7 @@ import httpx
 
 from core.config import GROQ_API_KEYS, DEBUG
 from core.memory import MemoryManager
-from self.model import self_summary_text
+from otto_self.model import self_summary_text
 
 logger = logging.getLogger("otto.brain")
 
@@ -52,7 +52,7 @@ _DEEP_TRIGGERS = {
 # System prompt dasar — Otto tidak hardcode fakta Rofi, hanya terima dari memory
 _BASE_SYSTEM = """\
 Kamu adalah Otto, asisten AI pribadi milik Rofi yang berjalan lokal di rumahnya.
-
+{self_section}
 Kepribadian:
 - Bicara natural, santai, seperti teman — bukan asisten korporat
 - Bahasa Indonesia campuran ringan (boleh sedikit Inggris teknis jika perlu)
@@ -233,17 +233,16 @@ class Brain:
     # ── System Prompt ─────────────────────────────────────────────────────────
 
     def _build_system_prompt(self) -> str:
-        # summary_for_llm() sudah handle kosong → return "" jika belum ada data
         profile_summary = self.memory.summary_for_llm(max_items=15)
-        if profile_summary:
-            profile_sec = _PROFILE_SECTION.format(profile_json=profile_summary)
-        else:
-            profile_sec = _NO_PROFILE
+        profile_sec = _PROFILE_SECTION.format(profile_json=profile_summary) if profile_summary else _NO_PROFILE
 
-        # ← tambah ini: Otto tahu siapa dirinya sebelum menjawab
-        otto_self = self_summary_text()
+        otto_self = self_summary_text()   # sekarang benar-benar dipakai
+        self_sec  = f"Tentang dirimu:\n{otto_self}" if otto_self else ""
 
-        return _BASE_SYSTEM.format(profile_section=profile_sec).strip()
+        return _BASE_SYSTEM.format(
+            self_section=self_sec,
+            profile_section=profile_sec,
+        ).strip()
 
     # ── Message Builder ───────────────────────────────────────────────────────
 

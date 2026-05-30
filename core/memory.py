@@ -25,6 +25,7 @@ class MemoryManager:
         self._short_term: deque = deque(maxlen=MEMORY["short_term_limit"])
         self._long_term: dict = {}
         self._load_long_term()
+        self._temp: dict[str, str] = {}
 
     # ─── SHORT TERM ───────────────────────────────────────────────────────────
 
@@ -197,6 +198,26 @@ class MemoryManager:
         except OSError as e:
             # Log tapi tidak crash — Otto tetap berjalan walau gagal simpan
             print(f"[memory] Gagal simpan: {e}")
+
+
+
+
+
+
+
+
+
+    def get_temp(self, key: str) -> str | None:
+        """Ambil nilai sementara (tidak persisten ke disk)."""
+        return self._temp.get(key)
+    
+    def set_temp(self, key: str, value: str) -> None:
+        """Simpan nilai sementara di memory (hilang saat restart)."""
+        self._temp[key] = value
+    
+    def delete_temp(self, key: str) -> None:
+        """Hapus nilai sementara."""
+        self._temp.pop(key, None)
 
     # ─── DEBUG ────────────────────────────────────────────────────────────────
 
