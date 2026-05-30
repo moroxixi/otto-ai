@@ -72,6 +72,25 @@ PIPER = {
     "config":  BASE_DIR / "voices" / "id_ID-news_tts-medium.onnx.json",
 }
 
+# ─── KOKORO TTS ───────────────────────────────────────────────────────────────
+KOKORO = {
+    "model":  BASE_DIR / "voices" / "kokoro" / "kokoro-v1.0.onnx",
+    "voices": BASE_DIR / "voices" / "kokoro" / "voices-v1.0.bin",
+    # Ganti voice di sini untuk eksperimen
+    "voice":  "am_adam",
+    "speed":  1.0,
+    "lang":   "id",
+}
+
+# ─── OUTPUT ROUTING ───────────────────────────────────────────────────────────
+OUTPUT = {
+    # "laptop" → pw-play langsung ke speaker laptop
+    # "ws"     → kirim base64 WAV ke iPhone via WebSocket
+    # "both"   → laptop + ws (untuk debugging)
+    "proactive_output": "laptop",   # Otto ngomong sendiri → speaker laptop
+    "response_output":  "ws",       # Balas Rofi → ke iPhone
+}
+
 # ─── AUDIO (PipeWire) ─────────────────────────────────────────────────────────
 AUDIO = {
     "sink_id":     58,           # ID speaker laptop kamu

@@ -360,29 +360,25 @@ async def _send_error(ws: WebSocket, msg: str) -> None:
 
 
 async def _broadcast_curiosity(question: str) -> None:
-    """Kirim pertanyaan Otto ke iPhone lewat TTS."""
-    if active_ws is None:
-        logger.info("[curiosity] Tidak ada client aktif, pertanyaan ditunda.")
-        return
-
-    audio_b64 = ""
+    """Kirim pertanyaan Otto — suara dari speaker laptop."""
+    # Putar lokal dulu (tidak perlu active_ws)
     try:
-        audio_bytes = await asyncio.to_thread(speaker.synthesize, question)
-        if audio_bytes:
-            audio_b64 = base64.b64encode(audio_bytes).decode()
+        await asyncio.to_thread(speaker.speak_local, question)
+        logger.info("[curiosity] Diputar di laptop: %s", question)
     except Exception as e:
-        logger.warning("[curiosity] TTS gagal: %s", e)
+        logger.warning("[curiosity] TTS lokal gagal: %s", e)
 
-    try:
-        await active_ws.send_json({
-            "type":  "response",
-            "data":  question,
-            "audio": audio_b64,
-            "meta":  {"intent": "curiosity", "skill": "curiosity"},
-        })
-        logger.info("[curiosity] Pertanyaan terkirim ke iPhone: %s", question)
-    except Exception as e:
-        logger.warning("[curiosity] Gagal kirim ke ws: %s", e)
+    # Tetap kirim teks ke iPhone (tanpa audio) agar UI update
+    if active_ws:
+        try:
+            await active_ws.send_json({
+                "type":  "response",
+                "data":  question,
+                "audio": "",   # kosong — audio sudah dari laptop
+                "meta":  {"intent": "curiosity", "skill": "curiosity"},
+            })
+        except Exception as e:
+            logger.warning("[curiosity] Gagal kirim teks ke ws: %s", e)
 
 
 async def _broadcast_curiosity_with_pending(question: str, hyp_id: str) -> None:
