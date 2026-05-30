@@ -73,32 +73,51 @@ class Executor:
 
     # ── Public API ───────────────────────────────────────────────────────────
 
-    async def dispatch(
-        self,
-        text: str,
-        history: list[dict] | None = None,
-    ) -> ExecutorResult:
-        """
-        Titik masuk utama. Terima teks mentah, kembalikan ExecutorResult.
-
-        Args:
-            text    : Teks dari user (sudah di-transcribe)
-            history : Riwayat percakapan untuk konteks LLM
-        """
+    async def dispatch(self, text, history=None):
         text = text.strip()
         if not text:
-            return ExecutorResult(success=False, text="Aku tidak dengar apa-apa.", error="empty input")
+            return ExecutorResult(
+                success=False,
+                text="Aku tidak dengar apa-apa.",
+                error="empty input"
+            )
 
-        # Cari skill yang cocok
+        # ── [1] Skill via regex — paling cepat, tidak butuh shortcut ──────
         match = self._find_skill(text)
         if match:
             skill, groups = match
-            logger.info("[executor] COMMAND → skill=%s input='%s'", skill.name, text)
+            logger.info("[executor] COMMAND → skill=%s", skill.name)
             return await self._run_skill(skill, text, groups)
 
-        # Tidak ada skill → chat ke LLM
-        logger.info("[executor] CHAT → brain text='%s'", text[:60])
-        return await self._run_chat(text, history or [])
+        # ── [2] Shortcut — LLM pernah jawab ini sebelumnya ────────────────
+        from core.shortcut import check as shortcut_check, record as shortcut_record
+
+        cached = shortcut_check(text)
+        if cached:
+            logger.info("[executor] SHORTCUT → '%s'", text[:50])
+            return ExecutorResult(
+                success = cached.get("success", True),
+                text    = cached.get("text", ""),
+                intent  = Intent.COMMAND,
+                skill   = "shortcut",
+            )
+
+        # ── [3] LLM — tidak ada skill, tidak ada shortcut ─────────────────
+        logger.info("[executor] CHAT → brain '%s'", text[:60])
+        result = await self._run_chat(text, history or [])
+
+        # Catat ke shortcut supaya request berikutnya bypass LLM
+        shortcut_record(text, {
+            "success": result.success,
+            "text":    result.text,
+            "data":    result.data,
+        })
+
+        return result    
+
+
+
+
 
     def register(
         self,
