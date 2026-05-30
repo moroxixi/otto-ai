@@ -84,7 +84,7 @@ _SKILL_REGISTER_FN = {
 async def lifespan(app: FastAPI):
     """Init semua komponen saat server start, cleanup saat stop."""
     global brain, transcriber, speaker, executor
-    global watcher, profiler, curiosity, scheduler 
+    global watcher, profiler, curiosity, scheduler, tracker 
 
     logging.basicConfig(
         level   = logging.DEBUG if DEBUG else logging.INFO,

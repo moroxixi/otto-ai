@@ -154,42 +154,43 @@ class Curiosity:
             "[curiosity] Tanya hipotesis %s: %s | Q: %s",
             hypothesis.id, hypothesis.claim, question,
         )
-        return question, hypothesis.id
+        
         from intelligence.growth_tracker import get_tracker
         try:
             get_tracker().record_event("proactive_question", {"question": question[:60]})
         except Exception:
             pass
+        return question, hypothesis.id
      
         
-     
+    async def handle_response(self, hypothesis_id: str, rofi_text: str) -> str:
+       verdict = self._parse_response(rofi_text)
+
+       # Update profiler dulu (WAJIB — ini yang ubah status hipotesis)
+       if verdict == "confirmed":
+           self._profiler.confirm(hypothesis_id)
+           logger.info("[curiosity] Hipotesis %s → CONFIRMED", hypothesis_id)
+       elif verdict == "rejected":
+           self._profiler.reject(hypothesis_id)
+           logger.info("[curiosity] Hipotesis %s → REJECTED", hypothesis_id)
+
+       # Record ke growth tracker
+       from intelligence.growth_tracker import get_tracker
+       try:
+           if verdict == "confirmed":
+               get_tracker().record_event("trust_response")
+           elif verdict == "rejected":
+               get_tracker().record_event("correction_accepted")
+       except Exception:
+           pass
+
+       # Reset pending
+       self._pending_hypothesis_id = None
+       self._save_state()
+       return verdict
         
 
-    async def handle_response(
-        self, hypothesis_id: str, rofi_text: str
-    ) -> str:
-        """
-        Proses jawaban Rofi terhadap pertanyaan sebelumnya.
-
-        Return: "confirmed" | "rejected" | "unclear"
-        """
-        verdict = self._parse_response(rofi_text)
-        from intelligence.growth_tracker import get_tracker
-        try:
-            if verdict == "confirmed":
-                get_tracker().record_event("trust_response")
-            elif verdict == "rejected":
-                get_tracker().record_event("correction_accepted")
-        except Exception:
-            pass
-        
-
-        # Reset pending
-        self._pending_hypothesis_id = None
-        self._save_state()
-
-        return verdict
-
+            
     def get_pending_hypothesis_id(self) -> Optional[str]:
         """Hipotesis yang sedang menunggu jawaban Rofi."""
         return self._pending_hypothesis_id
