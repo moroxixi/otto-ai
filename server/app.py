@@ -51,7 +51,8 @@ from core.executor import init_executor, Executor
 from intelligence.activity_watcher import init_watcher
 from intelligence.profiler import init_profiler
 from intelligence.curiosity import init_curiosity, get_curiosity
-from intelligence.scheduler import init_scheduler  
+from intelligence.scheduler import init_scheduler
+from intelligence.growth_tracker import init_tracker, get_tracker
 
 logger = logging.getLogger("otto.app")
 
@@ -65,6 +66,7 @@ watcher   = None
 profiler  = None
 curiosity = None
 scheduler = None
+tracker = None
 active_ws: WebSocket | None = None
 
 
@@ -115,6 +117,8 @@ async def lifespan(app: FastAPI):
     curiosity = init_curiosity(profiler)
 
     scheduler = init_scheduler(watcher, profiler, curiosity)
+    tracker = init_tracker()
+    logger.info("✓ Growth tracker siap")
     scheduler.set_question_callback(_broadcast_curiosity_with_pending)
     await scheduler.start()
     logger.info("✓ Scheduler + Curiosity siap")
@@ -181,6 +185,30 @@ async def health():
         },
         "skills": len(executor.list_skills()) if executor else 0,
     }
+
+
+
+@app.get("/growth/data")
+async def growth_data():
+    """
+    Endpoint untuk growth history viewer (index.html Otto).
+    Return JSON dengan semua data pertumbuhan.
+    """
+    from intelligence.growth_tracker import get_tracker
+    try:
+        t = get_tracker()
+        return t.full_report()
+    except Exception as e:
+        return {"error": str(e), "cumulative_total": 0, "weekly_history": [], "current_week": None}
+ 
+@app.get("/growth")
+async def growth_page():
+    """Tampilkan halaman riwayat pertumbuhan Otto."""
+    page = ROOT / "server" / "static" / "growth_history.html"
+    if page.exists():
+        return HTMLResponse(page.read_text())
+    return {"error": "growth_history.html belum ada di server/static/"}
+ 
 
 
 # ─────────────────────────── WebSocket ───────────────────────────────────────
@@ -291,6 +319,11 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
         logger.error("[ws] Executor error: %s", e)
         await _send_error(ws, "Otto sedang ada masalah.")
         return
+    if tracker:
+        tracker.record_interaction(
+            text_length=len(text),
+            skill=result.skill,
+        )
 
     reply = result.text
 

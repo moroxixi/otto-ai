@@ -155,6 +155,15 @@ class Curiosity:
             hypothesis.id, hypothesis.claim, question,
         )
         return question, hypothesis.id
+        from intelligence.growth_tracker import get_tracker
+        try:
+            get_tracker().record_event("proactive_question", {"question": question[:60]})
+        except Exception:
+            pass
+     
+        
+     
+        
 
     async def handle_response(
         self, hypothesis_id: str, rofi_text: str
@@ -165,18 +174,15 @@ class Curiosity:
         Return: "confirmed" | "rejected" | "unclear"
         """
         verdict = self._parse_response(rofi_text)
-
-        if verdict == "confirmed":
-            self._profiler.confirm(hypothesis_id)
-            logger.info("[curiosity] Hipotesis %s → CONFIRMED", hypothesis_id)
-        elif verdict == "rejected":
-            self._profiler.reject(hypothesis_id)
-            logger.info("[curiosity] Hipotesis %s → REJECTED", hypothesis_id)
-        else:
-            logger.info(
-                "[curiosity] Jawaban tidak jelas untuk hipotesis %s: '%s'",
-                hypothesis_id, rofi_text[:60],
-            )
+        from intelligence.growth_tracker import get_tracker
+        try:
+            if verdict == "confirmed":
+                get_tracker().record_event("trust_response")
+            elif verdict == "rejected":
+                get_tracker().record_event("correction_accepted")
+        except Exception:
+            pass
+        
 
         # Reset pending
         self._pending_hypothesis_id = None

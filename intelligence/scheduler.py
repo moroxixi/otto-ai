@@ -182,6 +182,12 @@ class Scheduler:
                 fn           = self._task_self_check,
                 run_at_start = False,
             ),
+            ScheduledTask(
+                name         = "growth_daily",
+                interval     = 24 * 3600,   # setiap 24 jam
+                fn           = self._task_growth_daily,
+                run_at_start = False,
+            ),
         ]
         logger.info("[scheduler] %d task terdaftar.", len(self._tasks))
 
@@ -196,6 +202,30 @@ class Scheduler:
             scheduler.set_question_callback(kirim_ke_rofi)
         """
         self._on_question_cb = cb
+
+
+
+
+
+
+    async def _task_growth_daily(self) -> None:
+        """Update riwayat pertumbuhan harian."""
+        from intelligence.growth_tracker import get_tracker
+        try:
+            tracker = get_tracker()
+            summary = tracker.daily_update(
+                memory   = getattr(self, '_memory', None),
+                profiler = self._profiler,
+            )
+            logger.info(
+                "[scheduler] Growth daily: +%d hari ini | kumulatif: %d | %s",
+                summary.get('score_today', 0),
+                summary.get('cumulative', 0),
+                summary.get('milestone', ('?', ''))[0],
+            )
+        except Exception as e:
+            logger.error("[scheduler] growth_daily error: %s", e)
+
 
     # ── Lifecycle ──────────────────────────────────────────────────────────────
 

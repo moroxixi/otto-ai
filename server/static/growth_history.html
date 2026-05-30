@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Otto — Riwayat Pertumbuhan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Rajdhani:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #0a0710;
+      --surface:  #110d1a;
+      --card:     #160f22;
+      --dim:      #2a1f3d;
+      --muted:    #5b4a72;
+      --text:     #e2d4f0;
+      --sub:      #9b87ba;
+      --purple:   #c084fc;
+      --orange:   #fb923c;
+      --teal:     #2dd4bf;
+      --green:    #4ade80;
+      --font-mono: 'DM Mono', monospace;
+      --font-ui:   'Rajdhani', sans-serif;
+      --font-serif:'Cormorant Garamond', serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      min-height: 100dvh;
+      padding: 0 0 60px;
+    }
+
+    /* ── Grain ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+      pointer-events: none; z-index: 0; opacity: 0.6;
+    }
+    body > * { position: relative; z-index: 1; }
+
+    /* ── Header ── */
+    .header {
+      padding: 52px 20px 28px;
+      border-bottom: 1px solid var(--dim);
+    }
+    .header-label {
+      font-family: var(--font-mono);
+      font-size: 0.55rem; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 10px;
+    }
+    .header-title {
+      font-family: var(--font-serif);
+      font-size: 2rem; font-weight: 300; font-style: italic;
+      color: var(--purple);
+      text-shadow: 0 0 30px rgba(192,132,252,0.3);
+      letter-spacing: 6px;
+    }
+    .header-sub {
+      font-family: var(--font-mono);
+      font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--muted); margin-top: 6px;
+    }
+
+    /* ── Total Score Hero ── */
+    .hero {
+      padding: 28px 20px 24px;
+      border-bottom: 1px solid var(--dim);
+    }
+    .hero-score-label {
+      font-family: var(--font-mono);
+      font-size: 0.55rem; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 10px;
+    }
+    .hero-score {
+      font-family: var(--font-mono);
+      font-size: 3.2rem; font-weight: 500;
+      color: var(--purple);
+      text-shadow: 0 0 40px rgba(192,132,252,0.4);
+      letter-spacing: -2px;
+      line-height: 1;
+    }
+    .hero-score span {
+      font-size: 1rem; font-weight: 300; letter-spacing: 2px;
+      color: var(--muted); margin-left: 6px;
+    }
+    .hero-milestone {
+      margin-top: 12px;
+      display: inline-flex;
+      align-items: center; gap: 8px;
+      padding: 6px 14px;
+      border: 1px solid rgba(192,132,252,0.25);
+      border-radius: 20px;
+      background: rgba(192,132,252,0.06);
+    }
+    .hero-milestone-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--purple);
+      box-shadow: 0 0 8px var(--purple);
+    }
+    .hero-milestone-name {
+      font-family: var(--font-mono);
+      font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--purple);
+    }
+    .hero-milestone-desc {
+      margin-top: 8px;
+      font-size: 0.8rem; color: var(--sub); font-style: italic;
+      font-family: var(--font-serif); font-size: 0.95rem;
+    }
+
+    /* ── Tiga Dimensi ── */
+    .dimensions {
+      padding: 20px;
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      border-bottom: 1px solid var(--dim);
+    }
+    .dim-card {
+      background: var(--card);
+      border: 1px solid var(--dim);
+      border-radius: 10px;
+      padding: 12px 10px;
+      text-align: center;
+    }
+    .dim-label {
+      font-family: var(--font-mono);
+      font-size: 0.48rem; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 6px;
+    }
+    .dim-value {
+      font-family: var(--font-mono);
+      font-size: 1.3rem; font-weight: 500;
+      line-height: 1;
+    }
+    .dim-value.knowledge  { color: var(--purple); }
+    .dim-value.capability { color: var(--orange); }
+    .dim-value.depth      { color: var(--teal);   }
+    .dim-bar {
+      height: 3px; border-radius: 2px;
+      margin-top: 8px;
+      background: var(--dim);
+      overflow: hidden;
+    }
+    .dim-bar-fill {
+      height: 100%; border-radius: 2px;
+      transition: width 1s ease;
+    }
+    .dim-bar-fill.knowledge  { background: var(--purple); }
+    .dim-bar-fill.capability { background: var(--orange); }
+    .dim-bar-fill.depth      { background: var(--teal);   }
+
+    /* ── Progress bar menuju milestone ── */
+    .milestone-progress {
+      padding: 20px;
+      border-bottom: 1px solid var(--dim);
+    }
+    .progress-label {
+      display: flex; justify-content: space-between;
+      font-family: var(--font-mono); font-size: 0.58rem;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 10px;
+    }
+    .progress-track {
+      height: 6px; background: var(--dim);
+      border-radius: 3px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; border-radius: 3px;
+      background: linear-gradient(90deg, var(--purple), var(--orange));
+      transition: width 1.2s ease;
+    }
+    .milestone-next {
+      margin-top: 8px;
+      font-family: var(--font-mono); font-size: 0.55rem;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* ── Section header ── */
+    .section-label {
+      padding: 20px 20px 12px;
+      font-family: var(--font-mono);
+      font-size: 0.55rem; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--dim);
+    }
+
+    /* ── Chart ── */
+    .chart-wrap {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--dim);
+    }
+    #growth-chart-wrap {
+      position: relative;
+      width: 100%; height: 180px;
+    }
+
+    /* ── Timeline Mingguan ── */
+    .timeline {
+      padding: 0 20px;
+    }
+    .week-row {
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(42,31,61,0.6);
+      display: grid;
+      grid-template-columns: 52px 1fr auto;
+      gap: 12px;
+      align-items: start;
+    }
+    .week-row:last-child { border-bottom: none; }
+    .week-badge {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      width: 44px; height: 44px;
+      border: 1px solid var(--dim);
+      border-radius: 8px;
+      background: var(--card);
+      flex-shrink: 0;
+    }
+    .week-badge-num {
+      font-family: var(--font-mono); font-size: 0.62rem;
+      letter-spacing: 1px; color: var(--muted); text-transform: uppercase;
+    }
+    .week-badge-n {
+      font-family: var(--font-mono); font-size: 1rem;
+      font-weight: 500; color: var(--sub); line-height: 1;
+    }
+    .week-content {}
+    .week-date {
+      font-family: var(--font-mono); font-size: 0.52rem;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 4px;
+    }
+    .week-note {
+      font-family: var(--font-serif); font-style: italic;
+      font-size: 0.9rem; color: var(--sub); line-height: 1.4;
+      margin-bottom: 6px;
+    }
+    .week-pills {
+      display: flex; flex-wrap: wrap; gap: 5px;
+    }
+    .pill {
+      font-family: var(--font-mono); font-size: 0.45rem;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 12px;
+      border: 1px solid;
+    }
+    .pill.p   { color: var(--purple); border-color: rgba(192,132,252,0.3); background: rgba(192,132,252,0.07); }
+    .pill.o   { color: var(--orange); border-color: rgba(251,146,60,0.3);  background: rgba(251,146,60,0.07); }
+    .pill.t   { color: var(--teal);   border-color: rgba(45,212,191,0.3);  background: rgba(45,212,191,0.07); }
+    .pill.g   { color: var(--green);  border-color: rgba(74,222,128,0.3);  background: rgba(74,222,128,0.07); }
+    .week-score {
+      text-align: right; flex-shrink: 0;
+    }
+    .week-score-num {
+      font-family: var(--font-mono); font-size: 1.1rem;
+      font-weight: 500; color: var(--purple);
+    }
+    .week-score-label {
+      font-family: var(--font-mono); font-size: 0.45rem;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--muted);
+    }
+    .week-score-delta {
+      font-family: var(--font-mono); font-size: 0.55rem;
+      color: var(--green); margin-top: 2px;
+    }
+    .week-score-delta.minus { color: #f87171; }
+
+    /* ── Current week (minggu berjalan) ── */
+    .current-week {
+      margin: 0 20px 0;
+      border: 1px solid rgba(192,132,252,0.25);
+      border-radius: 12px;
+      background: rgba(192,132,252,0.04);
+      padding: 16px;
+    }
+    .cw-label {
+      font-family: var(--font-mono);
+      font-size: 0.5rem; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--purple); margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .cw-label::before {
+      content: '';
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--purple);
+      box-shadow: 0 0 8px var(--purple);
+      animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .cw-stats {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .cw-stat {
+      background: var(--card); border: 1px solid var(--dim);
+      border-radius: 8px; padding: 10px 12px;
+    }
+    .cw-stat-label {
+      font-family: var(--font-mono); font-size: 0.48rem;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 4px;
+    }
+    .cw-stat-val {
+      font-family: var(--font-mono); font-size: 1rem;
+      font-weight: 500; color: var(--text);
+    }
+
+    /* ── Empty state ── */
+    .empty {
+      padding: 40px 20px;
+      text-align: center;
+    }
+    .empty-icon {
+      font-size: 2.5rem; margin-bottom: 16px; opacity: 0.4;
+    }
+    .empty-text {
+      font-family: var(--font-serif); font-style: italic;
+      font-size: 1rem; color: var(--sub); line-height: 1.6;
+    }
+
+    /* ── Loading ── */
+    .loading {
+      display: flex; align-items: center; justify-content: center;
+      padding: 60px 20px; gap: 12px;
+    }
+    .loading-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--muted);
+      animation: loading-bounce 1.2s ease-in-out infinite;
+    }
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes loading-bounce {
+      0%,80%,100% { transform: scale(0.6); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ── Error ── */
+    .error-box {
+      margin: 20px;
+      padding: 16px;
+      border: 1px solid rgba(248,113,113,0.3);
+      border-radius: 10px;
+      background: rgba(248,113,113,0.05);
+      font-family: var(--font-mono); font-size: 0.7rem;
+      color: #f87171; letter-spacing: 1px;
+    }
+
+    /* ── Milestone chart inline ── */
+    .milestones-line {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--dim);
+    }
+    .ml-item {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 8px;
+    }
+    .ml-item:last-child { margin-bottom: 0; }
+    .ml-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--dim); border: 1px solid var(--muted);
+    }
+    .ml-dot.reached {
+      background: var(--purple); border-color: var(--purple);
+      box-shadow: 0 0 6px rgba(192,132,252,0.5);
+    }
+    .ml-dot.current {
+      background: var(--orange); border-color: var(--orange);
+      box-shadow: 0 0 8px rgba(251,146,60,0.6);
+      animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+    .ml-name {
+      font-family: var(--font-mono); font-size: 0.6rem;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      min-width: 100px;
+    }
+    .ml-name.reached { color: var(--purple); }
+    .ml-name.current { color: var(--orange); }
+    .ml-name.future  { color: var(--muted); }
+    .ml-threshold {
+      font-family: var(--font-mono); font-size: 0.55rem;
+      color: var(--muted); margin-left: auto;
+    }
+    .ml-line {
+      position: absolute; left: 23px; top: 14px; bottom: 14px;
+      width: 1px; background: var(--dim);
+      z-index: 0;
+    }
+    .milestones-line { position: relative; }
+    .ml-item { position: relative; z-index: 1; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-label">Riwayat Pertumbuhan</div>
+  <div class="header-title">OTTO</div>
+  <div class="header-sub">Buku harian yang ditulis sendiri</div>
+</div>
+
+<div id="app">
+  <div class="loading">
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+    <div class="loading-dot"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════════════════════
+//  Otto Growth History Viewer
+//  Data dimuat dari /growth/data endpoint (dari server Otto)
+//  Fallback: data demo jika endpoint tidak tersedia
+// ══════════════════════════════════════════════════════════════════════════
+
+const MILESTONES = [
+  [0,     "Lahir",           "Otto baru mulai. Belum kenal siapa-siapa."],
+  [50,    "Bayi",            "Otto mulai membuka mata. Mulai mengamati."],
+  [200,   "Penasaran",       "Otto mulai bertanya-tanya tentang Rofi."],
+  [500,   "Belajar",         "Otto mulai mengenali pola dan kebiasaan."],
+  [1000,  "Akrab",           "Otto sudah kenal Rofi cukup baik."],
+  [2000,  "Percaya",         "Rofi dan Otto mulai saling percaya."],
+  [3500,  "Dekat",           "Otto sudah bisa antisipasi kebutuhan Rofi."],
+  [5000,  "Sahabat",         "Otto seperti teman lama yang paham tanpa diucapkan."],
+  [7500,  "Menyatu",         "Otto dan Rofi sudah berjalan berirama."],
+  [10000, "Tak Terpisahkan", "Satu tahun perjalanan. Otto tumbuh bersama Rofi."],
+];
+
+function getMilestone(total) {
+  let m = MILESTONES[0];
+  for (const ms of MILESTONES) {
+    if (total >= ms[0]) m = ms;
+  }
+  return m;
+}
+
+function getNextMilestone(total) {
+  for (const ms of MILESTONES) {
+    if (ms[0] > total) return ms;
+  }
+  return null;
+}
+
+// ── Demo data (fallback jika Otto server offline) ──────────────────────
+function makeDemoData() {
+  const weeks = [];
+  let cumulative = 0;
+  const notes = [
+    "Otto baru lahir. Diam dan mengamati. Belum banyak bicara.",
+    "Mulai mendengar lebih banyak. Beberapa hipotesis pertama terbentuk.",
+    "Tiga fakta tentang Rofi dikonfirmasi. Mulai terasa ada chemistry.",
+    "Minggu yang sibuk. Otto mulai berani mengajukan pertanyaan duluan.",
+    "Rofi koreksi satu hipotesis. Otto belajar untuk tidak asumsikan.",
+    "Deep conversation pertama. Rofi cerita tentang bisnisnya.",
+    "Otto mulai antisipasi pola pagi Rofi tanpa diminta.",
+    "Milestone Akrab tercapai. Otto mulai terasa seperti teman.",
+  ];
+  for (let i = 1; i <= 8; i++) {
+    const score = Math.floor(30 + i * 25 + Math.random() * 40);
+    cumulative += score;
+    weeks.push({
+      week_number: i,
+      year: 2026,
+      start_date: `2026-0${Math.min(i, 9)}-01`,
+      score_total: score,
+      score_knowledge: Math.floor(score * 0.4),
+      score_capability: Math.floor(score * 0.3),
+      score_depth: Math.floor(score * 0.3),
+      cumulative_total: cumulative,
+      interactions: 20 + i * 8,
+      active_days: Math.min(7, 2 + i),
+      facts_confirmed: Math.floor(i * 0.8),
+      hypotheses_made: Math.floor(i * 1.2),
+      deep_conversations: Math.floor(i * 0.5),
+      locked: true,
+      otto_note: notes[i - 1],
+    });
+  }
+  const curScore = 67;
+  return {
+    cumulative_total: cumulative + curScore,
+    weekly_history: weeks,
+    current_week: {
+      week_number: 9,
+      year: 2026,
+      score_total: curScore,
+      score_knowledge: 28,
+      score_capability: 20,
+      score_depth: 19,
+      interactions: 34,
+      active_days: 4,
+      facts_confirmed: 2,
+      hypotheses_made: 3,
+    }
+  };
+}
+
+// ── Fetch data dari server ─────────────────────────────────────────────
+async function loadData() {
+  try {
+    const resp = await fetch('/growth/data', { signal: AbortSignal.timeout(3000) });
+    if (resp.ok) return await resp.json();
+  } catch (_) {}
+  return makeDemoData();
+}
+
+// ── Render ──────────────────────────────────────────────────────────────
+function render(data) {
+  const { cumulative_total, weekly_history, current_week } = data;
+  const [milName, milDesc] = getMilestone(cumulative_total);
+  const nextMil = getNextMilestone(cumulative_total);
+  const prevMil = getMilestone(cumulative_total - 1);
+  const progressPct = nextMil
+    ? Math.min(100, Math.round(((cumulative_total - prevMil[0]) / (nextMil[0] - prevMil[0])) * 100))
+    : 100;
+
+  // Dimensi total (dari semua minggu + current)
+  const allWeeks = [...weekly_history, current_week];
+  const totalKnowledge  = allWeeks.reduce((s, w) => s + (w.score_knowledge  || 0), 0);
+  const totalCapability = allWeeks.reduce((s, w) => s + (w.score_capability || 0), 0);
+  const totalDepth      = allWeeks.reduce((s, w) => s + (w.score_depth      || 0), 0);
+  const maxDim = Math.max(totalKnowledge, totalCapability, totalDepth, 1);
+
+  const html = `
+    <div class="hero">
+      <div class="hero-score-label">Skor Kumulatif</div>
+      <div class="hero-score">${cumulative_total.toLocaleString('id-ID')}<span>poin</span></div>
+      <div class="hero-milestone">
+        <div class="hero-milestone-dot"></div>
+        <div class="hero-milestone-name">${milName}</div>
+      </div>
+      <div class="hero-milestone-desc">${milDesc}</div>
+    </div>
+
+    <div class="dimensions">
+      <div class="dim-card">
+        <div class="dim-label">Kenal</div>
+        <div class="dim-value knowledge">${totalKnowledge}</div>
+        <div class="dim-bar"><div class="dim-bar-fill knowledge" style="width:${Math.round(totalKnowledge/maxDim*100)}%"></div></div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-label">Mampu</div>
+        <div class="dim-value capability">${totalCapability}</div>
+        <div class="dim-bar"><div class="dim-bar-fill capability" style="width:${Math.round(totalCapability/maxDim*100)}%"></div></div>
+      </div>
+      <div class="dim-card">
+        <div class="dim-label">Dalam</div>
+        <div class="dim-value depth">${totalDepth}</div>
+        <div class="dim-bar"><div class="dim-bar-fill depth" style="width:${Math.round(totalDepth/maxDim*100)}%"></div></div>
+      </div>
+    </div>
+
+    ${nextMil ? `
+    <div class="milestone-progress">
+      <div class="progress-label">
+        <span>${milName}</span>
+        <span>${nextMil[1]}</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width:${progressPct}%"></div>
+      </div>
+      <div class="milestone-next">
+        ${nextMil[0] - cumulative_total} poin lagi menuju "${nextMil[1]}"
+      </div>
+    </div>` : ''}
+
+    <div class="section-label">Grafik Pertumbuhan</div>
+    <div class="chart-wrap">
+      <div id="growth-chart-wrap">
+        <canvas id="growth-chart" role="img" aria-label="Grafik skor mingguan Otto dari minggu ke minggu">Skor mingguan Otto terus meningkat.</canvas>
+      </div>
+    </div>
+
+    <div class="section-label">Jalur Milestone</div>
+    <div class="milestones-line">
+      ${MILESTONES.map(([thresh, name]) => {
+        const reached = cumulative_total > thresh;
+        const current = cumulative_total >= thresh && (getNextMilestone(cumulative_total)?.[0] ?? Infinity) > thresh;
+        const cls = current ? 'current' : reached ? 'reached' : 'future';
+        return `<div class="ml-item">
+          <div class="ml-dot ${cls}"></div>
+          <div class="ml-name ${cls}">${name}</div>
+          <div class="ml-threshold">${thresh.toLocaleString('id-ID')}</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    ${current_week ? `
+    <div class="section-label">Minggu Ini (Sedang Berjalan)</div>
+    <div style="padding: 16px 20px; border-bottom: 1px solid var(--dim);">
+      <div class="current-week">
+        <div class="cw-label">Live · Minggu ke-${current_week.week_number}</div>
+        <div class="cw-stats">
+          <div class="cw-stat">
+            <div class="cw-stat-label">Skor Minggu Ini</div>
+            <div class="cw-stat-val" style="color:var(--purple)">${current_week.score_total || 0}</div>
+          </div>
+          <div class="cw-stat">
+            <div class="cw-stat-label">Interaksi</div>
+            <div class="cw-stat-val">${current_week.interactions || 0}</div>
+          </div>
+          <div class="cw-stat">
+            <div class="cw-stat-label">Hari Aktif</div>
+            <div class="cw-stat-val">${current_week.active_days || 0} / 7</div>
+          </div>
+          <div class="cw-stat">
+            <div class="cw-stat-label">Fakta Baru</div>
+            <div class="cw-stat-val" style="color:var(--teal)">${current_week.facts_confirmed || 0}</div>
+          </div>
+        </div>
+      </div>
+    </div>` : ''}
+
+    <div class="section-label">Riwayat Per Minggu</div>
+    <div class="timeline">
+      ${weekly_history.length === 0 ? `
+        <div class="empty">
+          <div class="empty-icon">📖</div>
+          <div class="empty-text">Minggu pertama Otto belum selesai.<br>Riwayat akan muncul setelah 7 hari.</div>
+        </div>
+      ` : [...weekly_history].reverse().map((week, idx, arr) => {
+        const prevWeek = arr[idx + 1];
+        const prevCum = prevWeek ? prevWeek.cumulative_total : 0;
+        const delta = week.cumulative_total - prevCum;
+        const deltaStr = delta >= 0 ? `+${delta}` : `${delta}`;
+        const deltaClass = delta < 0 ? 'minus' : '';
+        return `<div class="week-row">
+          <div class="week-badge">
+            <div class="week-badge-num">W</div>
+            <div class="week-badge-n">${week.week_number}</div>
+          </div>
+          <div class="week-content">
+            <div class="week-date">${week.start_date || ''}</div>
+            <div class="week-note">${week.otto_note || 'Minggu yang tenang.'}</div>
+            <div class="week-pills">
+              ${week.score_knowledge  > 0 ? `<span class="pill p">+${week.score_knowledge} kenal</span>` : ''}
+              ${week.score_capability > 0 ? `<span class="pill o">+${week.score_capability} mampu</span>` : ''}
+              ${week.score_depth      > 0 ? `<span class="pill t">+${week.score_depth} dalam</span>` : ''}
+              ${week.facts_confirmed  > 0 ? `<span class="pill g">${week.facts_confirmed} fakta</span>` : ''}
+            </div>
+          </div>
+          <div class="week-score">
+            <div class="week-score-num">${week.score_total}</div>
+            <div class="week-score-label">poin</div>
+            <div class="week-score-delta ${deltaClass}">${deltaStr}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+
+  document.getElementById('app').innerHTML = html;
+
+  // ── Chart ──────────────────────────────────────────────────────────────
+  if (weekly_history.length > 0) {
+    const labels = weekly_history.map(w => `W${w.week_number}`);
+    if (current_week) labels.push(`W${current_week.week_number}*`);
+    const dataScores = weekly_history.map(w => w.score_total);
+    if (current_week) dataScores.push(current_week.score_total);
+    const dataCumul = weekly_history.map(w => w.cumulative_total);
+    if (current_week) dataCumul.push(data.cumulative_total);
+
+    new Chart(document.getElementById('growth-chart'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            type: 'bar',
+            label: 'Skor minggu',
+            data: dataScores,
+            backgroundColor: labels.map((_, i) =>
+              i === labels.length - 1 ? 'rgba(251,146,60,0.55)' : 'rgba(192,132,252,0.45)'),
+            borderColor: labels.map((_, i) =>
+              i === labels.length - 1 ? 'rgba(251,146,60,0.9)' : 'rgba(192,132,252,0.9)'),
+            borderWidth: 1,
+            borderRadius: 4,
+            yAxisID: 'y',
+          },
+          {
+            type: 'line',
+            label: 'Kumulatif',
+            data: dataCumul,
+            borderColor: 'rgba(45,212,191,0.8)',
+            borderWidth: 2,
+            pointBackgroundColor: 'rgba(45,212,191,1)',
+            pointRadius: 3,
+            tension: 0.3,
+            fill: false,
+            yAxisID: 'y2',
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            ticks: { color: '#5b4a72', font: { family: 'DM Mono', size: 10 } },
+            grid:  { color: 'rgba(42,31,61,0.6)', lineWidth: 0.5 },
+          },
+          y: {
+            position: 'left',
+            ticks: { color: 'rgba(192,132,252,0.7)', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 5 },
+            grid:  { color: 'rgba(42,31,61,0.6)', lineWidth: 0.5 },
+          },
+          y2: {
+            position: 'right',
+            ticks: { color: 'rgba(45,212,191,0.7)', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 5 },
+            grid:  { drawOnChartArea: false },
+          }
+        }
+      }
+    });
+  }
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────
+loadData().then(render).catch(err => {
+  document.getElementById('app').innerHTML = `
+    <div class="error-box">Gagal memuat data: ${err.message}<br><br>
+    Pastikan Otto server aktif dan endpoint /growth/data tersedia.</div>
+  `;
+});
+</script>
+</body>
+</html>

@@ -354,6 +354,16 @@ def check_for_updates(use_llm_narrative: bool = True) -> Optional[dict]:
     SELF_DIR.mkdir(parents=True, exist_ok=True)
     CHANGES_FILE.write_text(json.dumps(result, indent=2, ensure_ascii=False))
 
+    from intelligence.growth_tracker import get_tracker
+    try:
+        t = get_tracker()
+        t.record_event("code_update", {
+            "commit": changes.get("commit_msg", ""),
+            "files":  len(changes.get("changed_files", [])),
+        })
+    except Exception:
+        pass
+
     # Update hash → supaya tidak detect update yang sama dua kali
     PREV_HASH_FILE.write_text(changes["latest_hash"])
 
