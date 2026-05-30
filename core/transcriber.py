@@ -20,13 +20,12 @@ class Transcriber:
 
     def __init__(self):
         self._models: dict[str, WhisperModel] = {}
-        print("[transcriber] Loading Whisper tiny...")
-        self._models["tiny"] = WhisperModel(
-            "tiny", device="cpu", compute_type="int8",
-            num_workers=1, cpu_threads=2
+        print("[transcriber] Loading Whisper medium...")
+        self._models["medium"] = WhisperModel(
+            "medium", device="cpu", compute_type="int8",
+            num_workers=1, cpu_threads=3
         )
-        print("[transcriber] Whisper tiny siap.")
-        # medium tidak dipreload — terlalu berat
+        print("[transcriber] Whisper medium siap.")
 
     def _get_model(self, mode: str) -> WhisperModel:
         key = "tiny" if mode == "command" else "medium"

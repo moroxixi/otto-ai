@@ -272,11 +272,10 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
         return
 
     # 1. STT — pilih model berdasarkan panjang audio
-    # Heuristik: < 2 detik PCM 16kHz 16bit = 64000 bytes → tiny, else medium
-    model_hint = "command" if len(audio_bytes) < 64_000 else "chat"
+    model_hint = "chat"   # selalu medium, akurasi prioritas
     try:
         transcript = await asyncio.to_thread(
-            transcriber.transcribe, audio_bytes, mode="command"
+            transcriber.transcribe, audio_bytes, mode=model_hint
         )
     except Exception as e:
         logger.error("[ws] STT error: %s", e)
