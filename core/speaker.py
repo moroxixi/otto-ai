@@ -65,18 +65,24 @@ class Speaker:
     # ─── PUTAR AUDIO ──────────────────────────────────────────────────────────
 
     def _play_wav(self, wav_path: Path) -> None:
-        """Putar WAV ke speaker via pw-play (PipeWire)."""
-        cmd = [
-            AUDIO["play_cmd"],              # pw-play
-            "--target", str(AUDIO["sink_id"]),
-            str(wav_path),
-        ]
+        """Putar WAV ke speaker. Coba pw-play dulu, fallback ke aplay."""
         try:
-            subprocess.run(cmd, capture_output=True, timeout=60)
-        except subprocess.TimeoutExpired:
-            print("[speaker] pw-play timeout")
+            result = subprocess.run(
+                [AUDIO["play_cmd"], "--target", str(AUDIO["sink_id"]), str(wav_path)],
+                capture_output=True, timeout=60
+            )
+            if result.returncode == 0:
+                return
+            raise RuntimeError(f"pw-play returncode {result.returncode}")
         except Exception as e:
-            print(f"[speaker] Error putar audio: {e}")
+            print(f"[speaker] pw-play gagal ({e}), fallback ke aplay")
+            try:
+                subprocess.run(
+                    ["aplay", str(wav_path)],
+                    capture_output=True, timeout=60
+                )
+            except Exception as e2:
+                print(f"[speaker] aplay juga gagal: {e2}")
 
     # ─── PUBLIC API ───────────────────────────────────────────────────────────
 
