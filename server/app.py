@@ -43,26 +43,26 @@ if str(ROOT) not in sys.path:
 from core.config import SERVER, DEBUG, PATHS
 from core.memory import memory
 from core.brain import Brain, BrainResponse
-from core.transcriber import Transcriber
 from core.speaker import Speaker
 from intelligence.activity_watcher import init_watcher
 from intelligence.profiler import init_profiler
 from intelligence.curiosity import init_curiosity
 from intelligence.scheduler import init_scheduler
 from intelligence.growth_tracker import init_tracker, get_tracker
+from core.transcriber import Transcriber, get_transcriber
 
 logger = logging.getLogger("otto.app")
 
 # ─────────────────────────── State Global ────────────────────────────────────
 
 brain:       Brain       | None = None
-transcriber: Transcriber | None = None
 speaker:     Speaker     | None = None
 watcher   = None
 profiler  = None
 curiosity = None
 scheduler = None
 tracker   = None
+transcriber: Transcriber | None = None
 active_ws: WebSocket | None = None
 
 
@@ -85,7 +85,7 @@ async def lifespan(app: FastAPI):
     brain       = Brain(memory)
     logger.info("✓ Brain siap")
 
-    transcriber = Transcriber()
+    transcriber = get_transcriber()
     logger.info("✓ Transcriber siap")
 
     speaker     = Speaker()
@@ -214,23 +214,36 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
         await _send_error(ws, "Format base64 audio tidak valid.")
         return
 
-    # STT — selalu medium, prioritas akurasi
+    # ── STT dengan timeout global ──────────────────────────────────────
     try:
-        transcript = await asyncio.to_thread(
-            transcriber.transcribe, audio_bytes
+        transcript = await asyncio.wait_for(
+            asyncio.to_thread(transcriber.transcribe, audio_bytes),
+            timeout=40.0  # 40 detik: ffmpeg(15) + Whisper(25) max
         )
+    except asyncio.TimeoutError:
+        logger.warning("[ws] STT timeout — paksa berhenti")
+        await _send_json(ws, "response",
+            "Maaf Rofi, tadi aku tidak berhasil mendengar dengan baik. "
+            "Bisa kamu ulangi?"
+        )
+        return
     except Exception as e:
         logger.error("[ws] STT error: %s", e)
         await _send_error(ws, "Gagal transkripsi audio.")
         return
 
-    if not transcript.strip():
-        await _send_error(ws, "Tidak ada suara yang terdeteksi.")
+    # Tangani sinyal TIMEOUT dari transcriber
+    if not transcript or transcript.strip() == "" or transcript == "TIMEOUT":
+        if transcript == "TIMEOUT":
+            await _send_json(ws, "response",
+                "Maaf Rofi, audio tadi agak susah aku proses. Bisa diulang?"
+            )
+        else:
+            await _send_error(ws, "Tidak ada suara yang terdeteksi.")
         return
 
     await _send_json(ws, "transcript", transcript)
     await _handle_text(ws, transcript)
-
 
 async def _handle_text(ws: WebSocket, text: str) -> None:
     if not text:
@@ -253,8 +266,18 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
     history = memory.get_recent_messages(limit=20)
 
     # Kirim ke brain
+    # Kirim ke brain — dengan timeout
     try:
-        resp: BrainResponse = await brain.think(text, history=history)
+        resp: BrainResponse = await asyncio.wait_for(
+            brain.think(text, history=history),
+            timeout=30.0  # Groq biasanya < 5 detik, 30 detik sangat aman
+        )
+    except asyncio.TimeoutError:
+        logger.warning("[ws] Brain timeout untuk input: %s", text[:50])
+        await _send_json(ws, "response",
+            "Maaf Rofi, aku butuh waktu lebih dari biasanya. Bisa kamu tanya lagi?"
+        )
+        return
     except Exception as e:
         logger.error("[ws] Brain error: %s", e)
         await _send_error(ws, "Otto sedang ada masalah.")

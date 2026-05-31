@@ -119,50 +119,47 @@ class Transcriber:
     # ─── TRANSKRIPSI ──────────────────────────────────────────────────────────
 
     def transcribe(self, audio: bytes, mode: str = "auto") -> str:
-        """
-        Transkripsi audio ke teks.
-
-        mode: "auto"    → pilih model berdasarkan durasi (REKOMENDASI)
-              "command" → paksa tiny  (jika pemanggil yakin audio pendek)
-              "chat"    → paksa medium (jika pemanggil yakin audio panjang)
-
-        Return: teks hasil transkripsi, atau "" jika gagal/kosong.
-        """
         if not audio:
             return ""
 
-        # Konversi PCM → WAV jika belum (Whisper butuh WAV)
         if audio[:4] != b"RIFF":
             wav_audio = self.pcm_to_wav(audio)
         else:
             wav_audio = audio
 
-        # Tulis ke tempfile (Whisper butuh path file, bukan bytes)
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             tmp_path = Path(tmp.name)
 
-            # Kalau WebM/Opus dari browser → convert dulu via ffmpeg
             if audio[:4] not in (b"RIFF", b"\x00\x00\x00\x00"):
                 webm_tmp = tmp_path.with_suffix(".webm")
                 webm_tmp.write_bytes(audio)
-                subprocess.run([
-                    "ffmpeg", "-y", "-i", str(webm_tmp),
-                    "-ar", "16000", "-ac", "1", "-f", "wav", str(tmp_path)
-                ], capture_output=True)
-                webm_tmp.unlink(missing_ok=True)
-                # Re-baca WAV hasil konversi untuk deteksi durasi
+                try:
+                    result = subprocess.run([
+                        "ffmpeg", "-y", "-i", str(webm_tmp),
+                        "-ar", "16000", "-ac", "1", "-f", "wav", str(tmp_path)
+                    ], capture_output=True, timeout=15)
+                
+                    if result.returncode != 0:
+                        print(f"[transcriber] ffmpeg error: {result.stderr.decode()}")
+                        return ""
+                
+                except subprocess.TimeoutExpired:
+                    print("[transcriber] ffmpeg timeout — audio tidak bisa dikonversi")
+                    tmp_path.unlink(missing_ok=True)
+                    return "TIMEOUT"
+                
+                finally:
+                    webm_tmp.unlink(missing_ok=True)  # ← ini sudah aman karena webm_tmp pasti ada
                 wav_audio = tmp_path.read_bytes()
             else:
                 tmp_path.write_bytes(wav_audio)
 
         try:
-            # Pilih model
             if mode == "command":
-                model, label = self._models["medium"], "medium" 
+                model, label = self._models["medium"], "medium"
             elif mode == "chat":
                 model, label = self._models["medium"], "medium"
             else:
-                # "auto" → keputusan berdasarkan durasi audio
                 durasi = self._durasi_wav(wav_audio)
                 model, label = self._pilih_model(durasi)
                 print(f"[transcriber] Durasi {durasi:.1f}s → model [{label}]")
@@ -171,16 +168,13 @@ class Transcriber:
                 str(tmp_path),
                 language=WHISPER["language"],
                 beam_size=5,
-                initial_prompt=WHISPER_INITIAL_PROMPT,  # ← bias ke kosakata Otto
-                vad_filter=True,           # skip bagian sunyi → hemat komputasi
-                vad_parameters={
-                    "min_silence_duration_ms": 500,
-                },
+                initial_prompt=WHISPER_INITIAL_PROMPT,
+                vad_filter=True,
+                vad_parameters={"min_silence_duration_ms": 500},
             )
             semua_segment = list(segments)
             teks = " ".join(seg.text.strip() for seg in semua_segment).strip()
             teks = self._normalize_nama(teks)
-
             print(f"[transcriber] [{label}] → '{teks}'")
             return teks
 
@@ -210,6 +204,9 @@ class Transcriber:
         pcm = self.record(duration=duration)
         return self.transcribe(pcm, mode=mode)
 
-
-# Singleton — dipakai di seluruh proyek
-transcriber = Transcriber()
+_instance: Transcriber | None = None
+def get_transcriber() -> Transcriber:
+    global _instance
+    if _instance is None:
+        _instance = Transcriber()
+    return _instance
