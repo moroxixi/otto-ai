@@ -146,8 +146,8 @@ class GrowthTracker:
 
     def __init__(self) -> None:
         GROWTH_DIR.mkdir(parents=True, exist_ok=True)
-        self._history: list[dict] = self._load_history()
         self._current: dict       = self._load_current_week()
+        self._history: list[dict] = self._load_history()
         self._known_skills: set   = set(self._current.get("skills_used", []))
         logger.info(
             "[growth] Siap. Minggu ke-%d | Total skor: %d",
