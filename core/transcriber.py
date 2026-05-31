@@ -27,7 +27,7 @@ class Transcriber:
         self._models: dict[str, WhisperModel] = {}
         print("[transcriber] Loading Whisper medium...")
         self._models["medium"] = WhisperModel(
-            "medium", device="cpu", compute_type="int8", num_workers=2, cpu_threads=4 
+            "medium", device="cpu", compute_type="int8", num_workers=2, cpu_threads=4, local_files_only=True 
         )
         print("[transcriber] Whisper medium siap.")
 
