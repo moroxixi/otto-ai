@@ -61,9 +61,6 @@ SCORE_WEIGHTS = {
 
     # ── CAPABILITY: Otto semakin mampu ───────────────────────────────────────
     "code_update":            20,   # Ada commit baru → Otto "belajar skill baru"
-    "skill_first_use":        5,    # Skill dijalankan pertama kali
-    "shortcut_saved":         2,    # Otto semakin efisien (tidak perlu LLM lagi)
-    "skill_executed":         1,    # Skill berhasil dijalankan
     "no_error_day":           1,    # Satu hari tanpa crash/error
 
     # ── DEPTH: Hubungan semakin dalam ────────────────────────────────────────
@@ -146,9 +143,10 @@ class GrowthTracker:
 
     def __init__(self) -> None:
         GROWTH_DIR.mkdir(parents=True, exist_ok=True)
-        self._current: dict       = self._load_current_week()
+        self._known_skills: set = set()              # ← inisialisasi DULU
         self._history: list[dict] = self._load_history()
-        self._known_skills: set   = set(self._current.get("skills_used", []))
+        self._current: dict = self._load_current_week()
+        self._known_skills = set(self._current.get("skills_used", []))
         logger.info(
             "[growth] Siap. Minggu ke-%d | Total skor: %d",
             self._current.get("week_number", 1),
@@ -230,15 +228,10 @@ class GrowthTracker:
         Otomatis deteksi apakah ini obrolan dalam atau pendek.
         """
         self._current["interactions"] += 1
-
-        # Obrolan dalam = pesan > 40 karakter (kurang lebih 3+ kata)
         if text_length > 80:
             self.record_event("deep_conversation")
         else:
             self.record_event("active_day")
-
-        if skill:
-            self.record_event("skill_executed", {"skill": skill})
 
     def daily_update(self, memory=None, profiler=None) -> dict:
         """

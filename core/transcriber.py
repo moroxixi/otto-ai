@@ -1,12 +1,8 @@
 # core/transcriber.py
 # Whisper STT — rekam audio dari PipeWire, ubah jadi teks
 #
-# Strategi dual-model (otomatis berdasarkan durasi):
-#   audio < DURASI_PENDEK detik  → tiny   (~150ms) — perintah singkat
-#   audio ≥ DURASI_PENDEK detik  → medium (~800ms) — ngobrol panjang
-#
-# Keduanya dipreload saat startup → tidak ada cold-start lag.
-# Pemanggil tidak perlu tau model mana yang dipakai.
+# Strategi: selalu pakai medium untuk akurasi maksimal.
+# Otto fokus mengobrol, bukan perintah singkat.
 
 import io
 import re
@@ -57,12 +53,7 @@ class Transcriber:
             return 99.0  # fallback → medium
 
     def _pilih_model(self, durasi: float) -> tuple[WhisperModel, str]:
-        """
-        Pilih model berdasarkan durasi audio.
-        Return: (model, label_untuk_log)
-        """
-        if durasi <= DURASI_PENDEK:
-            return self._models["tiny"], "tiny⚡"
+    # tiny sudah dihapus — selalu pakai medium
         return self._models["medium"], "medium"
 
     def _normalize_nama(self, teks: str) -> str:
@@ -171,7 +162,7 @@ class Transcriber:
         try:
             # Pilih model
             if mode == "command":
-                model, label = self._models["tiny"], "tiny⚡"
+                model, label = self._models["medium"], "medium" 
             elif mode == "chat":
                 model, label = self._models["medium"], "medium"
             else:
@@ -190,7 +181,7 @@ class Transcriber:
                     "min_silence_duration_ms": 500,
                 },
             )
-
+            semua_segment = list(segments)
             teks = " ".join(seg.text.strip() for seg in segments).strip()
             teks = self._normalize_nama(teks)
 
@@ -208,14 +199,14 @@ class Transcriber:
     def dengarkan(self, duration: float = 5.0, mode: str = "auto") -> str:
         """
         Shortcut: rekam → transkripsi → return teks.
-        Ini yang dipanggil dari server/websocket.py.
+        Ini yang dipanggil dari server/app.py via asyncio.to_thread
 
         mode default diubah ke "auto" — model dipilih otomatis
         berdasarkan durasi audio yang direkam.
 
         Contoh:
             teks = transcriber.dengarkan(duration=4.0)
-            # → "Otto putar lagu"   (pakai tiny karena < 3.5s)
+            # → "Halo Otto"   (pakai medium karena < 3.5s)
 
             teks = transcriber.dengarkan(duration=10.0)
             # → teks panjang...     (pakai medium karena > 3.5s)

@@ -264,7 +264,7 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
 
     # Catat ke growth tracker
     if tracker:
-        tracker.record_interaction(text_length=len(text), skill="chat")
+        tracker.record_interaction(text_length=len(text))
 
     # TTS
     audio_b64 = ""
