@@ -49,7 +49,8 @@ from intelligence.profiler import init_profiler
 from intelligence.curiosity import init_curiosity
 from intelligence.scheduler import init_scheduler
 from intelligence.growth_tracker import init_tracker, get_tracker
-from core.transcriber import Transcriber, get_transcriber
+from core.transcriber import Transcriber, get_transcriber 
+from intelligence.pending_state import pending_state
 
 logger = logging.getLogger("otto.app")
 
@@ -82,22 +83,23 @@ async def lifespan(app: FastAPI):
     logger.info("── Otto starting up ──")
 
     # Core
-    brain       = Brain(memory)
-    logger.info("✓ Brain siap")
-
     transcriber = get_transcriber()
     logger.info("✓ Transcriber siap")
-
-    speaker     = Speaker()
+ 
+    speaker = Speaker()
     logger.info("✓ Speaker siap")
-
-    # Intelligence layer
+ 
+    # Intelligence layer — init dulu sebelum brain
     watcher   = init_watcher()
     profiler  = init_profiler(watcher)
     curiosity = init_curiosity(profiler)
     scheduler = init_scheduler(watcher, profiler, curiosity)
     tracker   = init_tracker()
-
+ 
+    # Brain dengan profiler
+    brain = Brain(memory, profiler=profiler)   # ← UBAH
+    logger.info("✓ Brain siap")
+ 
     scheduler.set_question_callback(_broadcast_curiosity_with_pending)
     await scheduler.start()
     logger.info("✓ Intelligence layer siap")
@@ -245,32 +247,32 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
     await _send_json(ws, "transcript", transcript)
     await _handle_text(ws, transcript)
 
+
 async def _handle_text(ws: WebSocket, text: str) -> None:
     if not text:
         return
-
+ 
     if scheduler:
         scheduler.notify_conversation_active()
-
+ 
     # Cek apakah ini jawaban untuk pertanyaan curiosity
-    pending_id = memory.get_temp("curiosity_pending")
+    pending_id = pending_state.get()          # ← dari disk, survive restart
     if pending_id:
         verdict = await curiosity.handle_response(pending_id, text)
-        memory.delete_temp("curiosity_pending")
+        pending_state.clear()                 # ← hapus dari disk
         if verdict != "unclear":
             ack = "Oke, aku catat." if verdict == "confirmed" else "Oke, aku koreksi."
             await _send_json(ws, "response", ack)
             return
-
+ 
     # Ambil history percakapan untuk konteks
     history = memory.get_recent_messages(limit=20)
-
-    # Kirim ke brain
+ 
     # Kirim ke brain — dengan timeout
     try:
         resp: BrainResponse = await asyncio.wait_for(
             brain.think(text, history=history),
-            timeout=30.0  # Groq biasanya < 5 detik, 30 detik sangat aman
+            timeout=30.0
         )
     except asyncio.TimeoutError:
         logger.warning("[ws] Brain timeout untuk input: %s", text[:50])
@@ -282,14 +284,12 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
         logger.error("[ws] Brain error: %s", e)
         await _send_error(ws, "Otto sedang ada masalah.")
         return
-
+ 
     reply = resp.text
-
-    # Catat ke growth tracker
+ 
     if tracker:
         tracker.record_interaction(text_length=len(text))
-
-    # TTS
+ 
     audio_b64 = ""
     try:
         audio_bytes = await asyncio.to_thread(speaker.synthesize, reply)
@@ -297,12 +297,12 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
             audio_b64 = base64.b64encode(audio_bytes).decode()
     except Exception as e:
         logger.warning("[ws] TTS gagal, kirim teks saja: %s", e)
-
+ 
     await ws.send_json({
         "type":  "response",
         "data":  reply,
         "audio": audio_b64,
-        "meta": {"intent": "curiosity"}
+        "meta":  {"intent": "curiosity"}
     })
 
 
@@ -336,7 +336,7 @@ async def _broadcast_curiosity(question: str) -> None:
 
 
 async def _broadcast_curiosity_with_pending(question: str, hyp_id: str) -> None:
-    memory.set_temp("curiosity_pending", hyp_id)
+    pending_state.set(hyp_id)
     await _broadcast_curiosity(question)
 
 

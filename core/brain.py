@@ -26,6 +26,7 @@ import httpx
 from core.config import GROQ_API_KEYS, DEBUG
 from core.memory import MemoryManager
 from otto_self.model import self_summary_text
+from intelligence.conversation_scanner import ConversationScanner
 
 logger = logging.getLogger("otto.brain")
 
@@ -84,18 +85,42 @@ class Brain:
         print(resp.text)
     """
 
-    def __init__(self, memory: MemoryManager) -> None:
+    def __init__(self, memory: MemoryManager, profiler=None) -> None:
         self.memory   = memory
         self._key_idx = 0
         self._keys    = self._load_keys()
         self._client  = httpx.AsyncClient(timeout=30.0)
 
-        # Cache system prompt — rebuild hanya kalau long-term memory berubah
-        # Tanpa ini: setiap request rebuild string panjang dari scratch (sia-sia)
-        self._cached_prompt: str = ""
-        self._cached_prompt_version: int = -1   # -1 = belum pernah build
+        # Scanner real-time — inject hipotesis dari percakapan langsung
+        # profiler boleh None (scanner akan skip jika tidak ada)
+        self._scanner = ConversationScanner(profiler) if profiler else None
 
-        logger.info("Brain siap. %d API key tersedia.", len(self._keys))
+        self._cached_prompt: str = ""
+        self._cached_prompt_version: int = -1
+
+        logger.info(
+            "Brain siap. %d API key tersedia. Scanner: %s",
+            len(self._keys),
+            "aktif" if self._scanner else "nonaktif (profiler tidak diberikan)",
+        )
+
+
+
+    async def _scan_conversation(self, user_text: str, otto_text: str) -> None:
+        '''
+        Jalankan ConversationScanner secara non-blocking.
+        Dipanggil sebagai create_task — tidak boleh raise exception ke caller.
+        '''
+        if self._scanner is None:
+            return
+        try:
+            await self._scanner.scan(user_text, source="user")
+            # Otto text juga di-scan tapi dengan source="otto"
+            # (sebagian besar rules hanya aktif untuk source="user")
+            await self._scanner.scan(otto_text, source="otto")
+        except Exception as e:
+            logger.warning("[brain] Scanner error (non-fatal): %s", e)
+
 
     # ── Public API ───────────────────────────────────────────────────────────
 
@@ -137,6 +162,7 @@ class Brain:
         )
 
         asyncio.create_task(self._log_to_memory(user_text, text))
+        asyncio.create_task(self._scan_conversation(user_text, text))
         return resp
 
     async def think_stream(
@@ -186,6 +212,9 @@ class Brain:
 
         asyncio.create_task(
             self._log_to_memory(user_text, "".join(full_text))
+        )
+        asyncio.create_task(
+            self._scan_conversation(user_text, "".join(full_text))  # ← TAMBAH
         )
 
     async def close(self) -> None:
