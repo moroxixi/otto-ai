@@ -175,8 +175,7 @@ class GrowthTracker:
         # Tentukan dimensi
         knowledge_events   = {"hypothesis_proposed", "hypothesis_confirmed", "hypothesis_rejected",
                                "fact_remembered", "new_topic_discussed", "consecutive_day"}
-        capability_events  = {"code_update", "skill_first_use", "shortcut_saved",
-                               "skill_executed", "no_error_day"}
+        capability_events  = {"code_update", "no_error_day"}
         depth_events       = {"deep_conversation", "trust_response", "correction_accepted",
                                "proactive_question", "active_day"}
 
@@ -198,11 +197,7 @@ class GrowthTracker:
             self._current["deep_conversations"] += 1
         if event_type == "code_update":
             self._current["code_updates"] += 1
-        if event_type == "skill_executed":
-            skill = detail.get("skill", "")
-            if skill:
-                self._known_skills.add(skill)
-                self._current["skills_used"] = list(self._known_skills)
+        
 
         # Log event
         self._current["events"].append({
@@ -586,11 +581,8 @@ if __name__ == "__main__":
         ("hypothesis_proposed",  {"claim": "Rofi aktif di malam hari"}),
         ("hypothesis_confirmed", {"claim": "Rofi aktif di malam hari"}),
         ("deep_conversation",    {"topic": "rencana bisnis"}),
-        ("skill_executed",       {"skill": "reminder"}),
-        ("skill_executed",       {"skill": "play_santai"}),
         ("code_update",          {"commit": "Tambah skill tracker"}),
         ("fact_remembered",      {"key": "rofi.kopi"}),
-        ("shortcut_saved",       {}),
         ("proactive_question",   {"question": "Rofi, kamu suka kopi?"}),
     ]
 

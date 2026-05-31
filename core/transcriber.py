@@ -17,9 +17,8 @@ from core.config import WHISPER, AUDIO
 from core.vocabulary import WHISPER_INITIAL_PROMPT, NAMA_ALIAS
 
 
-# ── Batas durasi untuk pemilihan model ────────────────────────
-# Audio di bawah ini → tiny (cepat), di atas → medium (akurat)
-DURASI_PENDEK: float = 3.5  # detik
+#   "command" → sama dengan medium (tiny sudah dihapus)
+#   "chat"    → paksa medium
 
 
 class Transcriber:
@@ -182,7 +181,7 @@ class Transcriber:
                 },
             )
             semua_segment = list(segments)
-            teks = " ".join(seg.text.strip() for seg in segments).strip()
+            teks = " ".join(seg.text.strip() for seg in semua_segment).strip()
             teks = self._normalize_nama(teks)
 
             print(f"[transcriber] [{label}] → '{teks}'")
