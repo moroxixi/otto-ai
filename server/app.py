@@ -279,11 +279,7 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
         "type":  "response",
         "data":  reply,
         "audio": audio_b64,
-        "meta": {
-            "model":   resp.model,
-            "latency": resp.latency_ms,
-            "tokens":  resp.prompt_tokens + resp.completion_tokens,
-        },
+        "meta": {"intent": "curiosity"}
     })
 
 

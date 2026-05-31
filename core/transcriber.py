@@ -25,12 +25,9 @@ class Transcriber:
 
     def __init__(self):
         self._models: dict[str, WhisperModel] = {}
-
-        # Preload KEDUA model saat startup
-        # Tujuan: tidak ada cold-start lag saat pertama kali dipanggil
         print("[transcriber] Loading Whisper medium...")
         self._models["medium"] = WhisperModel(
-            "medium", device="cpu", local_files_only=True 
+            "medium", device="cpu", compute_type="int8", num_workers=2, cpu_threads=4 
         )
         print("[transcriber] Whisper medium siap.")
 

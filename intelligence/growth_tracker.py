@@ -217,7 +217,7 @@ class GrowthTracker:
                      score, event_type, self._current["score_total"])
         return score
 
-    def record_interaction(self, text_length: int = 0, skill: str = "") -> None:
+    def record_interaction(self, text_length: int = 0) -> None:
         """
         Shortcut untuk mencatat satu interaksi (dipanggil dari app.py).
         Otomatis deteksi apakah ini obrolan dalam atau pendek.
