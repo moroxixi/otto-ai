@@ -27,6 +27,10 @@ class MemoryManager:
         self._load_long_term()
         self._temp: dict[str, str] = {}
 
+        # Cache fingerprint — untuk deteksi perubahan long-term
+        # Brain pakai ini untuk tahu kapan harus rebuild system prompt
+        self._long_term_version: int = 0
+
     # ─── SHORT TERM ───────────────────────────────────────────────────────────
 
     def add_message(self, role: str, content: str) -> None:
@@ -49,6 +53,19 @@ class MemoryManager:
             {"role": m["role"], "content": m["content"]}
             for m in self._short_term
         ]
+
+    def get_recent_messages(self, limit: int = 20) -> list[dict]:
+        """
+        Kembalikan N pesan terakhir untuk konteks LLM.
+        Alias bersih dari get_short_term() dengan batas jumlah.
+
+        Dipanggil dari app.py sebelum brain.think().
+        """
+        messages = [
+            {"role": m["role"], "content": m["content"]}
+            for m in self._short_term
+        ]
+        return messages[-limit:]
 
     def clear_short_term(self) -> None:
         """Reset percakapan — misal saat sesi baru dimulai."""
@@ -76,13 +93,23 @@ class MemoryManager:
             "updated_at": time.time(),
             "confirmed":  source == "konfirmasi_rofi",
         }
+        self._long_term_version += 1   # ← tandai ada perubahan
         self._save_long_term()
 
+    def forget(self, key: str) -> bool:
+        """
+        Hapus satu fakta dari long-term memory.
+        Return True jika berhasil, False jika key tidak ditemukan.
+        """
+        if key in self._long_term:
+            del self._long_term[key]
+            self._long_term_version += 1   # ← tandai ada perubahan
+            self._save_long_term()
+            return True
+        return False
+
     def recall(self, key: str, default=None):
-        """
-        Ambil nilai dari long-term memory.
-        Return default jika key tidak ada.
-        """
+        """Ambil nilai dari long-term memory."""
         entry = self._long_term.get(key)
         if entry is None:
             return default
@@ -92,24 +119,8 @@ class MemoryManager:
         """Ambil entry lengkap (termasuk source, timestamp, confirmed)."""
         return self._long_term.get(key)
 
-    def forget(self, key: str) -> bool:
-        """
-        Hapus satu fakta dari long-term memory.
-        Return True jika berhasil, False jika key tidak ditemukan.
-        """
-        if key in self._long_term:
-            del self._long_term[key]
-            self._save_long_term()
-            return True
-        return False
-
     def search(self, keyword: str) -> dict:
-        """
-        Cari semua key yang mengandung keyword.
-        Berguna saat brain.py perlu cari konteks relevan.
-
-        Contoh: memory.search("rofi") → semua yang diketahui tentang Rofi
-        """
+        """Cari semua key yang mengandung keyword."""
         keyword = keyword.lower()
         return {
             k: v for k, v in self._long_term.items()
@@ -128,20 +139,22 @@ class MemoryManager:
     def long_term_count(self) -> int:
         return len(self._long_term)
 
+    def long_term_version(self) -> int:
+        """
+        Versi counter long-term memory.
+        Naik setiap kali ada remember() atau forget().
+        Brain pakai ini untuk cache invalidation system prompt.
+        """
+        return self._long_term_version
+
     def summary_for_llm(self, max_items: int = 15) -> str:
         """
         Buat ringkasan long-term memory untuk dimasukkan ke system prompt LLM.
         Prioritaskan fakta yang sudah dikonfirmasi, terbaru duluan.
-
-        Contoh output:
-          [Yang Otto tahu tentang Rofi]
-          - rofi.minuman.favorit: kopi oat (konfirmasi_rofi)
-          - rofi.kebiasaan.pagi: aktif jam 7 (observasi)
         """
         if not self._long_term:
             return ""
 
-        # Urutkan: confirmed dulu, lalu terbaru
         sorted_entries = sorted(
             self._long_term.items(),
             key=lambda x: (
@@ -161,25 +174,19 @@ class MemoryManager:
     # ─── PERSIST ──────────────────────────────────────────────────────────────
 
     def _load_long_term(self) -> None:
-        """Load dari disk saat startup."""
         if self.memory_path.exists():
             try:
                 with open(self.memory_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    # Validasi: pastikan format benar
                     if isinstance(data, dict):
                         self._long_term = data
             except (json.JSONDecodeError, OSError):
-                # File rusak → mulai kosong, tidak crash
                 self._long_term = {}
         else:
             self._long_term = {}
 
     def _save_long_term(self) -> None:
-        """Simpan ke disk. Dipanggil tiap kali ada perubahan."""
-        # Trim jika melebihi batas
         if len(self._long_term) > MEMORY["long_term_limit"]:
-            # Buang yang paling lama & tidak confirmed
             sorted_keys = sorted(
                 self._long_term.items(),
                 key=lambda x: (
@@ -187,8 +194,8 @@ class MemoryManager:
                     x[1].get("updated_at", 0)
                 )
             )
-            keys_to_remove = [k for k, _ in sorted_keys[:len(self._long_term) - MEMORY["long_term_limit"]]]
-            for k in keys_to_remove:
+            to_remove = [k for k, _ in sorted_keys[:len(self._long_term) - MEMORY["long_term_limit"]]]
+            for k in to_remove:
                 del self._long_term[k]
 
         try:
@@ -196,27 +203,17 @@ class MemoryManager:
             with open(self.memory_path, "w", encoding="utf-8") as f:
                 json.dump(self._long_term, f, ensure_ascii=False, indent=2)
         except OSError as e:
-            # Log tapi tidak crash — Otto tetap berjalan walau gagal simpan
             print(f"[memory] Gagal simpan: {e}")
 
-
-
-
-
-
-
-
+    # ─── TEMP ─────────────────────────────────────────────────────────────────
 
     def get_temp(self, key: str) -> str | None:
-        """Ambil nilai sementara (tidak persisten ke disk)."""
         return self._temp.get(key)
-    
+
     def set_temp(self, key: str, value: str) -> None:
-        """Simpan nilai sementara di memory (hilang saat restart)."""
         self._temp[key] = value
-    
+
     def delete_temp(self, key: str) -> None:
-        """Hapus nilai sementara."""
         self._temp.pop(key, None)
 
     # ─── DEBUG ────────────────────────────────────────────────────────────────
@@ -229,5 +226,5 @@ class MemoryManager:
         )
 
 
-# Singleton — satu instance dipakai di seluruh Otto
+# Singleton
 memory = MemoryManager()

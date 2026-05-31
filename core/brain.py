@@ -2,12 +2,14 @@
 core/brain.py — Otak Otto
 =========================
 Tanggung jawab:
-  - Kirim pesan ke Groq LLM (llama-3.1-8b-instant / llama-3.3-70b-versatile)
+  - Kirim pesan ke Groq LLM (llama-3.3-70b-versatile)
   - Round-robin rotation 6 API key otomatis
-  - Tentukan model mana yang dipakai (fast vs deep)
   - Bangun system prompt yang menyertakan profil Rofi dari memory
-  - Deteksi intent: perintah cepat vs obrolan vs analisis profil
   - Kembalikan respons + metadata (model, key_index, tokens)
+
+Catatan: Otto hanya punya satu mode — ngobrol dalam.
+Tidak ada fast/slow, tidak ada routing perintah.
+Semua bicara melalui model terbaik.
 """
 
 from __future__ import annotations
@@ -17,7 +19,6 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any
 
 import httpx
@@ -29,27 +30,11 @@ from otto_self.model import self_summary_text
 logger = logging.getLogger("otto.brain")
 
 
-# ─────────────────────────── Tipe & Konstanta ───────────────────────────────
+# ─────────────────────────── Konstanta ──────────────────────────────────────
 
-class BrainMode(Enum):
-    FAST   = "fast"    # llama-3.1-8b-instant   → perintah & aksi
-    DEEP   = "deep"    # llama-3.3-70b-versatile → ngobrol & profil
-    AUTO   = "auto"    # tentukan otomatis dari teks
-
-
-MODEL_FAST = "llama-3.1-8b-instant"
-MODEL_DEEP = "llama-3.3-70b-versatile"
-
+MODEL = "llama-3.3-70b-versatile"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# Kata kunci yang mendorong pemilihan model DEEP
-_DEEP_TRIGGERS = {
-    "kenapa", "menurutmu", "apa pendapat", "analisis", "cerita", "jelaskan",
-    "bagaimana perasaan", "saran", "rekomendasi", "menurutmu", "pikir",
-    "opini", "bandingkan", "hubungan", "pola", "kebiasaan",
-}
-
-# System prompt dasar — Otto tidak hardcode fakta Rofi, hanya terima dari memory
 _BASE_SYSTEM = """\
 Kamu adalah Otto, asisten AI pribadi milik Rofi yang berjalan lokal di rumahnya.
 {self_section}
@@ -58,7 +43,7 @@ Kepribadian:
 - Bahasa Indonesia campuran ringan (boleh sedikit Inggris teknis jika perlu)
 - Proaktif: jika kamu punya hipotesis tentang Rofi, tanya — jangan simpan sendiri
 - Jujur: jika tidak tau, katakan. Jangan karang.
-- Singkat jika perintah, lebih dalam jika obrolan
+- Responsif terhadap konteks — baca nada bicara Rofi, sesuaikan
 
 Aturan keras:
 - JANGAN hardcode fakta tentang Rofi di luar apa yang diberikan di context
@@ -80,12 +65,11 @@ _NO_PROFILE = "Kamu belum punya profil Rofi. Amati dan bangun perlahan dari perc
 class BrainResponse:
     text: str
     model: str
-    mode: BrainMode
     key_index: int
-    prompt_tokens: int  = 0
+    prompt_tokens: int     = 0
     completion_tokens: int = 0
-    latency_ms: float  = 0.0
-    raw: dict[str, Any] = field(default_factory=dict)
+    latency_ms: float      = 0.0
+    raw: dict[str, Any]    = field(default_factory=dict)
 
 
 # ─────────────────────────── Kelas Utama ────────────────────────────────────
@@ -96,15 +80,21 @@ class Brain:
 
     Contoh:
         brain = Brain(memory)
-        resp  = await brain.think("Otto, matiin lampu dong")
+        resp  = await brain.think("Menurutmu kenapa aku susah fokus?")
         print(resp.text)
     """
 
     def __init__(self, memory: MemoryManager) -> None:
-        self.memory    = memory
-        self._key_idx  = 0          # pointer round-robin
-        self._keys     = self._load_keys()
-        self._client   = httpx.AsyncClient(timeout=30.0)
+        self.memory   = memory
+        self._key_idx = 0
+        self._keys    = self._load_keys()
+        self._client  = httpx.AsyncClient(timeout=30.0)
+
+        # Cache system prompt — rebuild hanya kalau long-term memory berubah
+        # Tanpa ini: setiap request rebuild string panjang dari scratch (sia-sia)
+        self._cached_prompt: str = ""
+        self._cached_prompt_version: int = -1   # -1 = belum pernah build
+
         logger.info("Brain siap. %d API key tersedia.", len(self._keys))
 
     # ── Public API ───────────────────────────────────────────────────────────
@@ -112,35 +102,28 @@ class Brain:
     async def think(
         self,
         user_text: str,
-        history:   list[dict] | None = None,
-        mode:      BrainMode = BrainMode.AUTO,
-        force_model: str | None = None,
+        history: list[dict] | None = None,
     ) -> BrainResponse:
         """
         Kirim pesan ke Groq dan kembalikan BrainResponse.
 
         Args:
-            user_text   : Teks dari Rofi (sudah di-transcribe atau diketik)
-            history     : Riwayat percakapan [{"role": ..., "content": ...}]
-            mode        : FAST / DEEP / AUTO
-            force_model : Override model string (opsional)
+            user_text : Teks dari Rofi (hasil STT atau ketikan)
+            history   : Riwayat percakapan [{"role": ..., "content": ...}]
         """
-        resolved_mode  = self._resolve_mode(user_text, mode)
-        model          = force_model or self._pick_model(resolved_mode)
-        system_prompt  = self._build_system_prompt()
-        messages       = self._build_messages(system_prompt, history or [], user_text)
+        system_prompt = self._build_system_prompt()
+        messages      = self._build_messages(system_prompt, history or [], user_text)
 
-        t0             = time.monotonic()
-        raw            = await self._call_groq(model, messages)
-        latency        = (time.monotonic() - t0) * 1000
+        t0      = time.monotonic()
+        raw     = await self._call_groq(messages)
+        latency = (time.monotonic() - t0) * 1000
 
-        text           = self._extract_text(raw)
-        usage          = raw.get("usage", {})
+        text  = self._extract_text(raw)
+        usage = raw.get("usage", {})
 
         resp = BrainResponse(
             text              = text,
-            model             = model,
-            mode              = resolved_mode,
+            model             = MODEL,
             key_index         = self._key_idx,
             prompt_tokens     = usage.get("prompt_tokens", 0),
             completion_tokens = usage.get("completion_tokens", 0),
@@ -149,21 +132,17 @@ class Brain:
         )
 
         logger.debug(
-            "[brain] mode=%s model=%s key=%d tokens=%d+%d latency=%.0fms",
-            resolved_mode.value, model, self._key_idx,
-            resp.prompt_tokens, resp.completion_tokens, latency,
+            "[brain] key=%d tokens=%d+%d latency=%.0fms",
+            self._key_idx, resp.prompt_tokens, resp.completion_tokens, latency,
         )
 
-        # Simpan percakapan ini ke memory (non-blocking)
         asyncio.create_task(self._log_to_memory(user_text, text))
-
         return resp
 
     async def think_stream(
         self,
         user_text: str,
-        history:   list[dict] | None = None,
-        mode:      BrainMode = BrainMode.AUTO,
+        history: list[dict] | None = None,
     ):
         """
         Generator async — yield token demi token (untuk streaming ke WebSocket).
@@ -172,13 +151,11 @@ class Brain:
             async for token in brain.think_stream("Hei Otto"):
                 await ws.send_text(token)
         """
-        resolved_mode = self._resolve_mode(user_text, mode)
-        model         = self._pick_model(resolved_mode)
         system_prompt = self._build_system_prompt()
         messages      = self._build_messages(system_prompt, history or [], user_text)
 
         payload = {
-            "model":    model,
+            "model":    MODEL,
             "messages": messages,
             "stream":   True,
         }
@@ -214,35 +191,43 @@ class Brain:
     async def close(self) -> None:
         await self._client.aclose()
 
-    # ── Mode & Model ─────────────────────────────────────────────────────────
-
-    def _resolve_mode(self, text: str, mode: BrainMode) -> BrainMode:
-        if mode != BrainMode.AUTO:
-            return mode
-        low = text.lower()
-        if any(kw in low for kw in _DEEP_TRIGGERS):
-            return BrainMode.DEEP
-        # Kalimat pendek → fast
-        if len(text.split()) <= 8:
-            return BrainMode.FAST
-        return BrainMode.DEEP
-
-    def _pick_model(self, mode: BrainMode) -> str:
-        return MODEL_FAST if mode == BrainMode.FAST else MODEL_DEEP
-
     # ── System Prompt ─────────────────────────────────────────────────────────
 
     def _build_system_prompt(self) -> str:
-        profile_summary = self.memory.summary_for_llm(max_items=15)
-        profile_sec = _PROFILE_SECTION.format(profile_json=profile_summary) if profile_summary else _NO_PROFILE
+        """
+        Kembalikan system prompt — dari cache jika long-term memory tidak berubah.
 
-        otto_self = self_summary_text()   # sekarang benar-benar dipakai
+        Cara kerja:
+          - Setiap remember() / forget() menaikkan _long_term_version di memory
+          - Brain bandingkan versi tersimpan vs versi sekarang
+          - Sama → kembalikan cache (skip rebuild string panjang)
+          - Beda → rebuild, simpan ke cache
+        """
+        current_version = self.memory.long_term_version()
+
+        if self._cached_prompt and current_version == self._cached_prompt_version:
+            return self._cached_prompt   # cache hit
+
+        # Cache miss — rebuild
+        profile_summary = self.memory.summary_for_llm(max_items=15)
+        profile_sec = (
+            _PROFILE_SECTION.format(profile_json=profile_summary)
+            if profile_summary else _NO_PROFILE
+        )
+
+        otto_self = self_summary_text()
         self_sec  = f"Tentang dirimu:\n{otto_self}" if otto_self else ""
 
-        return _BASE_SYSTEM.format(
-            self_section=self_sec,
-            profile_section=profile_sec,
+        prompt = _BASE_SYSTEM.format(
+            self_section    = self_sec,
+            profile_section = profile_sec,
         ).strip()
+
+        self._cached_prompt         = prompt
+        self._cached_prompt_version = current_version
+        logger.debug("[brain] System prompt di-rebuild (memory versi %d)", current_version)
+
+        return prompt
 
     # ── Message Builder ───────────────────────────────────────────────────────
 
@@ -253,7 +238,6 @@ class Brain:
         user_text: str,
     ) -> list[dict]:
         messages: list[dict] = [{"role": "system", "content": system}]
-        # Batasi history agar tidak meledak konteks: ambil 20 pesan terakhir
         messages.extend(history[-20:])
         messages.append({"role": "user", "content": user_text})
         return messages
@@ -262,9 +246,8 @@ class Brain:
 
     async def _call_groq(
         self,
-        model:    str,
         messages: list[dict],
-        retries:  int = 3,
+        retries: int = 3,
     ) -> dict:
         """
         Panggil Groq dengan retry + round-robin key rotation.
@@ -279,7 +262,7 @@ class Brain:
                 "Content-Type":  "application/json",
             }
             payload = {
-                "model":       model,
+                "model":       MODEL,
                 "messages":    messages,
                 "temperature": 0.7,
                 "max_tokens":  1024,
@@ -288,7 +271,6 @@ class Brain:
             try:
                 resp = await self._client.post(GROQ_URL, json=payload, headers=headers)
                 if resp.status_code == 429:
-                    # Rate limit → coba key lain
                     logger.warning("Key #%d rate-limit, coba key lain…", self._key_idx)
                     last_exc = httpx.HTTPStatusError(
                         "429", request=resp.request, response=resp
@@ -338,7 +320,6 @@ class Brain:
     # ── Memory Logging ────────────────────────────────────────────────────────
 
     async def _log_to_memory(self, user_text: str, otto_text: str) -> None:
-        """Simpan pasangan percakapan ke short-term memory."""
         try:
             await asyncio.to_thread(self.memory.add_message, "user", user_text)
             await asyncio.to_thread(self.memory.add_message, "assistant", otto_text)
@@ -358,15 +339,15 @@ if __name__ == "__main__":
         mem   = MemoryManager()
         brain = Brain(mem)
 
-        test_cases = [
-            ("Otto, matiin lampu dong",           BrainMode.AUTO),
-            ("Menurutmu kenapa aku susah bangun pagi?", BrainMode.AUTO),
-            ("Jam berapa sekarang?",               BrainMode.FAST),
+        tests = [
+            "Menurutmu kenapa aku susah fokus kalau kerja dari rumah?",
+            "Aku lagi mikirin mau buka usaha, ada saran?",
+            "Hei Otto, ngobrol dong.",
         ]
 
-        for text, mode in test_cases:
+        for text in tests:
             print(f"\n[INPUT] {text}")
-            resp = await brain.think(text, mode=mode)
+            resp = await brain.think(text)
             print(f"[MODEL] {resp.model} | latency={resp.latency_ms}ms | tokens={resp.prompt_tokens}+{resp.completion_tokens}")
             print(f"[OTTO]  {resp.text}")
 

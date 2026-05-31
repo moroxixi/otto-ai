@@ -3,8 +3,8 @@ server/app.py — Entry Point Otto
 ==================================
 Alur lengkap:
   iPhone (WebSocket) → app.py
-      → transcriber.transcribe(audio_bytes)   [Whisper]
-      → executor.dispatch(teks)               [brain / skill]
+      → transcriber.transcribe(audio_bytes)   [Whisper medium]
+      → brain.think(teks)                     [Groq 70b]
       → speaker.synthesize(result.text)       [Piper TTS]
       → kirim audio balik ke iPhone
 
@@ -27,7 +27,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
-import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -37,54 +36,42 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-# Pastikan root project ada di path saat dijalankan langsung
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from core.config import SERVER, DEBUG, PATHS
-from core.memory import memory          # singleton MemoryManager
-from core.brain import Brain
+from core.memory import memory
+from core.brain import Brain, BrainResponse
 from core.transcriber import Transcriber
 from core.speaker import Speaker
-from core.executor import init_executor, Executor
 from intelligence.activity_watcher import init_watcher
 from intelligence.profiler import init_profiler
-from intelligence.curiosity import init_curiosity, get_curiosity
+from intelligence.curiosity import init_curiosity
 from intelligence.scheduler import init_scheduler
 from intelligence.growth_tracker import init_tracker, get_tracker
 
 logger = logging.getLogger("otto.app")
 
-# ─────────────────────────── Startup / Shutdown ──────────────────────────────
+# ─────────────────────────── State Global ────────────────────────────────────
 
-brain:       Brain      | None = None
-transcriber: Transcriber| None = None
-speaker:     Speaker    | None = None
-executor:    Executor   | None = None
+brain:       Brain       | None = None
+transcriber: Transcriber | None = None
+speaker:     Speaker     | None = None
 watcher   = None
 profiler  = None
 curiosity = None
 scheduler = None
-tracker = None
+tracker   = None
 active_ws: WebSocket | None = None
 
 
-
-_SKILL_REGISTER_FN = {
-    "skills.system":   "register_system_skills",
-    "skills.media":    "register_media_skills",
-    "skills.reminder": "register_reminder_skills",
-}
-
-
-
+# ─────────────────────────── Startup / Shutdown ──────────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Init semua komponen saat server start, cleanup saat stop."""
-    global brain, transcriber, speaker, executor
-    global watcher, profiler, curiosity, scheduler, tracker 
+    global brain, transcriber, speaker
+    global watcher, profiler, curiosity, scheduler, tracker
 
     logging.basicConfig(
         level   = logging.DEBUG if DEBUG else logging.INFO,
@@ -94,73 +81,42 @@ async def lifespan(app: FastAPI):
 
     logger.info("── Otto starting up ──")
 
-    # 1. Brain (Groq LLM)
-    brain = Brain(memory)
+    # Core
+    brain       = Brain(memory)
     logger.info("✓ Brain siap")
 
-    # 2. Transcriber (Whisper)
     transcriber = Transcriber()
     logger.info("✓ Transcriber siap")
 
-    # 3. Speaker (Piper TTS)
-    speaker = Speaker()
+    speaker     = Speaker()
     logger.info("✓ Speaker siap")
-
-    # 4. Executor (dispatcher + skills)
-    executor = init_executor(brain)
-    _load_skills(executor)
-    logger.info("✓ Executor siap — %d skill aktif", len(executor.list_skills()))
 
     # Intelligence layer
     watcher   = init_watcher()
     profiler  = init_profiler(watcher)
     curiosity = init_curiosity(profiler)
-
     scheduler = init_scheduler(watcher, profiler, curiosity)
-    tracker = init_tracker()
-    logger.info("✓ Growth tracker siap")
+    tracker   = init_tracker()
+
     scheduler.set_question_callback(_broadcast_curiosity_with_pending)
     await scheduler.start()
-    logger.info("✓ Scheduler + Curiosity siap")
+    logger.info("✓ Intelligence layer siap")
 
     logger.info("── Otto siap. WebSocket: wss://%s:%d/ws ──", SERVER["host"], SERVER["port"])
 
-    yield  # server jalan di sini
+    yield
 
-    # Cleanup
     logger.info("Otto shutting down…")
     if scheduler:
-        await scheduler.stop()    # ← tambah ini
+        await scheduler.stop()
     if brain:
         await brain.close()
 
-
-def _load_skills(ex: Executor) -> None:
-    """
-    Import semua skill dari skills/*.py.
-    Setiap modul skill mendaftarkan dirinya ke executor saat di-import.
-    Jika modul belum ada, skip dengan peringatan — tidak crash.
-    """
-
-    for mod_name, fn_name in _SKILL_REGISTER_FN.items():
-        try:
-            import importlib
-            mod = importlib.import_module(mod_name)
-            if hasattr(mod, fn_name):
-                getattr(mod, fn_name)(ex)
-                logger.info("  ✓ Skill '%s' dimuat", mod_name)
-            else:
-                logger.warning("  ✗ '%s' tidak punya %s()", mod_name, fn_name)
-        except ModuleNotFoundError:
-            logger.warning("  ✗ Skill '%s' belum ada, skip", mod_name)
-        except Exception as e:
-            logger.error("  ✗ Skill '%s' error: %s", mod_name, e)
 
 # ─────────────────────────── App ─────────────────────────────────────────────
 
 app = FastAPI(title="Otto AI", lifespan=lifespan)
 
-# Serve static files (index.html untuk iPhone)
 static_dir = ROOT / "server" / "static"
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
@@ -168,7 +124,6 @@ if static_dir.exists():
 
 @app.get("/")
 async def root():
-    """Redirect ke UI jika ada, atau info JSON."""
     index = static_dir / "index.html"
     if index.exists():
         return HTMLResponse(index.read_text())
@@ -178,37 +133,29 @@ async def root():
 @app.get("/health")
 async def health():
     return {
-        "status":  "ok",
-        "memory":  {
+        "status": "ok",
+        "memory": {
             "short": memory.short_term_count(),
             "long":  memory.long_term_count(),
         },
-        "skills": len(executor.list_skills()) if executor else 0,
     }
-
 
 
 @app.get("/growth/data")
 async def growth_data():
-    """
-    Endpoint untuk growth history viewer (index.html Otto).
-    Return JSON dengan semua data pertumbuhan.
-    """
-    from intelligence.growth_tracker import get_tracker
     try:
         t = get_tracker()
         return t.full_report()
     except Exception as e:
         return {"error": str(e), "cumulative_total": 0, "weekly_history": [], "current_week": None}
- 
+
+
 @app.get("/growth")
 async def growth_page():
-    """Tampilkan halaman riwayat pertumbuhan Otto."""
     page = ROOT / "server" / "static" / "growth_history.html"
     if page.exists():
         return HTMLResponse(page.read_text())
     return {"error": "growth_history.html belum ada di server/static/"}
- 
 
 
 # ─────────────────────────── WebSocket ───────────────────────────────────────
@@ -217,11 +164,10 @@ async def growth_page():
 async def websocket_endpoint(ws: WebSocket):
     global active_ws
     await ws.accept()
-    active_ws = ws                                      # ← simpan referensi
+    active_ws = ws
     client = ws.client.host if ws.client else "unknown"
     logger.info("[ws] Client terhubung: %s", client)
 
-    # Kirim sapaan
     await _send_json(ws, "response", "Otto aktif. Hei, ada yang bisa aku bantu?")
 
     try:
@@ -256,9 +202,6 @@ async def websocket_endpoint(ws: WebSocket):
 # ─────────────────────────── Handler ─────────────────────────────────────────
 
 async def _handle_audio(ws: WebSocket, msg: dict) -> None:
-    """
-    Terima audio base64 → STT → dispatch → TTS → kirim balik.
-    """
     b64 = msg.get("data", "")
     if not b64:
         await _send_error(ws, "Data audio kosong.")
@@ -266,16 +209,15 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
 
     try:
         audio_bytes = base64.b64decode(b64)
-        logger.info("[debug] Audio diterima: %d bytes", len(audio_bytes))
+        logger.info("[ws] Audio diterima: %d bytes", len(audio_bytes))
     except Exception:
         await _send_error(ws, "Format base64 audio tidak valid.")
         return
 
-    # 1. STT — pilih model berdasarkan panjang audio
-    model_hint = "chat"   # selalu medium, akurasi prioritas
+    # STT — selalu medium, prioritas akurasi
     try:
         transcript = await asyncio.to_thread(
-            transcriber.transcribe, audio_bytes, mode=model_hint
+            transcriber.transcribe, audio_bytes
         )
     except Exception as e:
         logger.error("[ws] STT error: %s", e)
@@ -286,10 +228,7 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
         await _send_error(ws, "Tidak ada suara yang terdeteksi.")
         return
 
-    # Kirim transcript dulu agar UI bisa tampilkan teks sebelum jawaban
     await _send_json(ws, "transcript", transcript)
-
-    # 2. Proses teks
     await _handle_text(ws, transcript)
 
 
@@ -297,11 +236,10 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
     if not text:
         return
 
-    # Beritahu scheduler bahwa Rofi sedang aktif (tunda curiosity)
     if scheduler:
-        scheduler.notify_conversation_active()   # ← tambah ini
+        scheduler.notify_conversation_active()
 
-    # Cek dulu: apakah ini jawaban untuk pertanyaan curiosity?
+    # Cek apakah ini jawaban untuk pertanyaan curiosity
     pending_id = memory.get_temp("curiosity_pending")
     if pending_id:
         verdict = await curiosity.handle_response(pending_id, text)
@@ -309,22 +247,24 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
         if verdict != "unclear":
             ack = "Oke, aku catat." if verdict == "confirmed" else "Oke, aku koreksi."
             await _send_json(ws, "response", ack)
-            return   # tidak diteruskan ke executor
+            return
 
-    # Dispatch ke executor
+    # Ambil history percakapan untuk konteks
+    history = memory.get_recent_messages(limit=20)
+
+    # Kirim ke brain
     try:
-        result = await executor.dispatch(text)
+        resp: BrainResponse = await brain.think(text, history=history)
     except Exception as e:
-        logger.error("[ws] Executor error: %s", e)
+        logger.error("[ws] Brain error: %s", e)
         await _send_error(ws, "Otto sedang ada masalah.")
         return
-    if tracker:
-        tracker.record_interaction(
-            text_length=len(text),
-            skill=result.skill,
-        )
 
-    reply = result.text
+    reply = resp.text
+
+    # Catat ke growth tracker
+    if tracker:
+        tracker.record_interaction(text_length=len(text), skill="chat")
 
     # TTS
     audio_b64 = ""
@@ -335,14 +275,14 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
     except Exception as e:
         logger.warning("[ws] TTS gagal, kirim teks saja: %s", e)
 
-    # Kirim respons + audio
     await ws.send_json({
         "type":  "response",
         "data":  reply,
         "audio": audio_b64,
         "meta": {
-            "intent": result.intent.value,
-            "skill":  result.skill,
+            "model":   resp.model,
+            "latency": resp.latency_ms,
+            "tokens":  resp.prompt_tokens + resp.completion_tokens,
         },
     })
 
@@ -352,28 +292,24 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
 async def _send_json(ws: WebSocket, msg_type: str, data: str) -> None:
     await ws.send_json({"type": msg_type, "data": data})
 
+
 async def _send_error(ws: WebSocket, msg: str) -> None:
     await ws.send_json({"type": "error", "data": msg})
 
 
-
-
 async def _broadcast_curiosity(question: str) -> None:
-    """Kirim pertanyaan Otto — suara dari speaker laptop."""
-    # Putar lokal dulu (tidak perlu active_ws)
     try:
         await asyncio.to_thread(speaker.speak_local, question)
         logger.info("[curiosity] Diputar di laptop: %s", question)
     except Exception as e:
         logger.warning("[curiosity] TTS lokal gagal: %s", e)
 
-    # Tetap kirim teks ke iPhone (tanpa audio) agar UI update
     if active_ws:
         try:
             await active_ws.send_json({
                 "type":  "response",
                 "data":  question,
-                "audio": "",   # kosong — audio sudah dari laptop
+                "audio": "",
                 "meta":  {"intent": "curiosity", "skill": "curiosity"},
             })
         except Exception as e:
@@ -381,14 +317,8 @@ async def _broadcast_curiosity(question: str) -> None:
 
 
 async def _broadcast_curiosity_with_pending(question: str, hyp_id: str) -> None:
-    """
-    Callback untuk Scheduler — simpan pending lalu broadcast.
-    Scheduler sudah handle timing & cooldown, jadi langsung kirim.
-    """
     memory.set_temp("curiosity_pending", hyp_id)
     await _broadcast_curiosity(question)
-
-
 
 
 # ─────────────────────────── Main ────────────────────────────────────────────
