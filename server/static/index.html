@@ -355,18 +355,18 @@
 <div id="resp-wrap"><div id="resp-text">...</div></div>
 
 <div id="intent-badge"></div>
-
 <script>
+
 // ══════════════════════════════════════════════════════
-//  OTTO Interface — disesuaikan dengan protocol app.py
-//  WS path  : /ws
-//  Protocol :
-//    TX → { type: "text",  data: "teks" }
-//         { type: "audio", data: "<base64 PCM>" }
+//  OTTO Interface Script — Revisi bersih
+//  Fix utama: konversi audio via Web Audio API (iOS safe)
+//  WS Protocol:
+//    TX → { type: "audio", data: "<base64 WAV>" }
+//         { type: "text",  data: "teks" }
 //         { type: "ping" }
 //    RX ← { type: "transcript", data: "..." }
-//         { type: "response",   data: "...", audio: "<base64 WAV>", meta: {intent, skill} }
-//         { type: "error",      data: "..." }
+//         { type: "response", data: "...", audio: "<base64 WAV>", meta: {} }
+//         { type: "error", data: "..." }
 //         { type: "pong" }
 // ══════════════════════════════════════════════════════
 
@@ -411,7 +411,7 @@ let typingStart   = 0;
 let typingDur     = 0;
 
 // ══════════════════════════════════════════════════════
-//  EMOJI MAP — tetap dipertahankan dari Libo, disesuaikan Otto
+//  EMOJI MAP
 // ══════════════════════════════════════════════════════
 const EMOJI_MAP = [
   { k: ['siap, bos','siap bos','baik bos'],              e: '🫡', l: 'SIAP'      },
@@ -433,8 +433,7 @@ const EMOJI_MAP = [
   { k: ['adzan','sholat','shalat'],                       e: '🕌', l: 'SHOLAT'    },
   { k: ['jam','pukul','waktu sekarang'],                  e: '🕐', l: 'JAM'       },
   { k: ['catatan','catat'],                               e: '📝', l: 'CATAT'     },
-  // profil / observasi — karakter khusus Otto
-  { k: ['yang aku amati','pola kamu','kebiasaanmu','yang aku pelajari'], e: '🪞', l: 'AMATI' },
+  { k: ['yang aku amati','pola kamu','kebiasaanmu'],      e: '🪞', l: 'AMATI'     },
   { k: ['hipotesis','siklus','observasi'],                e: '🔬', l: 'ANALISIS'  },
   { k: ['ringkasan','rekap','laporan'],                   e: '📊', l: 'REKAP'     },
   { k: ['nasihat','saran','masukan'],                     e: '💡', l: 'IDE'       },
@@ -467,7 +466,7 @@ function emojiFromText(text) {
   return null;
 }
 
-// ── Emoji swap animation ──────────────────────────────
+// ── Emoji swap ────────────────────────────────────────
 let _curEmoji = '';
 function setEmoji(e, l) {
   if (e === _curEmoji) { if (l) bLabel.textContent = l; return; }
@@ -482,7 +481,7 @@ function setEmoji(e, l) {
   }, 110);
 }
 
-// ── Emoji loop synced to audio playback ──────────────
+// ── Emoji loop ────────────────────────────────────────
 function startEmojiLoop(text, dur) {
   stopEmojiLoop();
   if (!text) return;
@@ -546,11 +545,88 @@ async function ensureAudioCtx() {
 }
 
 // ══════════════════════════════════════════════════════
-//  Putar WAV base64 dari respons Otto (app.py format)
+//  KONVERSI AUDIO → WAV (iOS/Android safe)
+//
+//  Masalah lama: browser kirim WebM → server gagal proses
+//  Solusi: decode di browser via Web Audio API → encode WAV manual
+//  Tidak perlu library external, jalan di semua browser
+// ══════════════════════════════════════════════════════
+async function convertToWav(blob) {
+  await ensureAudioCtx();
+
+  // Step 1: Blob → ArrayBuffer
+  const arrayBuf = await blob.arrayBuffer();
+
+  // Step 2: Decode audio (browser handle semua format: WebM, MP4, dll)
+  let decoded;
+  try {
+    decoded = await audioCtx.decodeAudioData(arrayBuf);
+  } catch (err) {
+    console.error('[audio] decodeAudioData gagal:', err);
+    throw new Error('Gagal decode audio: ' + err.message);
+  }
+
+  // Step 3: Ambil PCM mono (downmix jika stereo)
+  const numCh      = decoded.numberOfChannels;
+  const numSamples = decoded.length;
+  const pcm        = new Float32Array(numSamples);
+
+  if (numCh === 1) {
+    decoded.copyFromChannel(pcm, 0);
+  } else {
+    // Downmix: rata-rata semua channel
+    const tmp = new Float32Array(numSamples);
+    for (let ch = 0; ch < numCh; ch++) {
+      decoded.copyFromChannel(tmp, ch);
+      for (let i = 0; i < numSamples; i++) pcm[i] += tmp[i];
+    }
+    for (let i = 0; i < numSamples; i++) pcm[i] /= numCh;
+  }
+
+  // Step 4: Resample ke 16kHz (Whisper optimal)
+  const targetRate   = 16000;
+  const sourceRate   = decoded.sampleRate;
+  const ratio        = sourceRate / targetRate;
+  const outSamples   = Math.floor(numSamples / ratio);
+  const resampled    = new Int16Array(outSamples);
+
+  for (let i = 0; i < outSamples; i++) {
+    const srcIdx = Math.min(Math.floor(i * ratio), numSamples - 1);
+    // Clamp float32 → int16
+    resampled[i] = Math.max(-32768, Math.min(32767, Math.round(pcm[srcIdx] * 32767)));
+  }
+
+  // Step 5: Buat WAV header + data
+  const wavBuf  = new ArrayBuffer(44 + resampled.byteLength);
+  const view    = new DataView(wavBuf);
+  const write   = (off, str) => { for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i)); };
+
+  write(0,  'RIFF');
+  view.setUint32(4,  36 + resampled.byteLength, true); // file size - 8
+  write(8,  'WAVE');
+  write(12, 'fmt ');
+  view.setUint32(16, 16,          true);  // PCM chunk size
+  view.setUint16(20, 1,           true);  // format: PCM
+  view.setUint16(22, 1,           true);  // channels: mono
+  view.setUint32(24, targetRate,  true);  // sample rate: 16000
+  view.setUint32(28, targetRate * 2, true); // byte rate
+  view.setUint16(32, 2,           true);  // block align
+  view.setUint16(34, 16,          true);  // bits per sample
+  write(36, 'data');
+  view.setUint32(40, resampled.byteLength, true);
+
+  // Tulis PCM samples
+  new Int16Array(wavBuf, 44).set(resampled);
+
+  console.log(`[audio] WAV siap: ${outSamples} samples @ ${targetRate}Hz (${(wavBuf.byteLength / 1024).toFixed(1)}KB)`);
+  return new Blob([wavBuf], { type: 'audio/wav' });
+}
+
+// ══════════════════════════════════════════════════════
+//  Putar audio respons Otto
 // ══════════════════════════════════════════════════════
 async function playResponseAudio(b64wav, text) {
   if (!b64wav) {
-    // Tidak ada audio — tampilkan teks saja
     respEl.textContent = text || '';
     respEl.classList.remove('typing');
     return;
@@ -558,16 +634,15 @@ async function playResponseAudio(b64wav, text) {
 
   await ensureAudioCtx();
 
-  // Decode base64 → ArrayBuffer
-  const binary  = atob(b64wav);
-  const bytes   = new Uint8Array(binary.length);
+  const binary = atob(b64wav);
+  const bytes  = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 
   let audioBuffer;
   try {
     audioBuffer = await audioCtx.decodeAudioData(bytes.buffer);
   } catch(e) {
-    console.warn('Audio decode gagal:', e);
+    console.warn('[audio] Decode respons gagal:', e);
     respEl.textContent = text || '';
     return;
   }
@@ -588,7 +663,6 @@ async function playResponseAudio(b64wav, text) {
   gain.connect(analyser);
   analyser.connect(audioCtx.destination);
 
-  // Fade-out tail
   gain.gain.setValueAtTime(1.0, typingStart);
   gain.gain.setTargetAtTime(0, typingStart + typingDur + 0.05, 0.25);
 
@@ -605,12 +679,9 @@ async function playResponseAudio(b64wav, text) {
   };
 
   source.start(0);
-
-  // Button state
   btn.classList.add('speaking');
   btn.classList.remove('recording', 'busy');
 
-  // Typing
   if (typingText) {
     respEl.textContent = '';
     respEl.classList.add('typing');
@@ -618,10 +689,7 @@ async function playResponseAudio(b64wav, text) {
     startTyping();
   }
 
-  // Emoji loop
   startEmojiLoop(typingText, typingDur);
-
-  // Visualizer
   vizBox.classList.add('talking');
   setStatus('speak', '🔊 Otto Berbicara...');
 
@@ -639,25 +707,28 @@ async function playResponseAudio(b64wav, text) {
 }
 
 // ══════════════════════════════════════════════════════
-//  WebSocket — protocol sesuai app.py Otto
+//  WebSocket
 // ══════════════════════════════════════════════════════
 function connectWS() {
   const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
   ws = new WebSocket(`${proto}${location.host}/ws`);
 
   let _pingInterval = null;
+
   ws.onopen = () => {
     wsRetry = 0;
     setWsStatus('connected', 'online');
     if (!isMicGranted) setStatus('', 'Ketuk lingkaran mic untuk mulai');
     if (_pingInterval) clearInterval(_pingInterval);
-    _pingInterval = setInterval(() => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({type:'ping'})); }, 20000);
+    _pingInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
+    }, 20000);
   };
 
   ws.onclose = () => {
     setWsStatus('disconnected', 'offline');
     if (wsIntentClose) return;
-    if (wsRetry >= WS_MAX_RETRY) { setWsStatus('disconnected','gagal terhubung'); return; }
+    if (wsRetry >= WS_MAX_RETRY) { setWsStatus('disconnected', 'gagal terhubung'); return; }
     wsRetry++;
     setWsStatus('reconnecting', `reconnect ${wsRetry}...`);
     setTimeout(connectWS, WS_RETRY_DELAY);
@@ -670,12 +741,10 @@ function connectWS() {
     try { msg = JSON.parse(event.data); } catch { return; }
 
     switch (msg.type) {
-
       case 'pong':
         break;
 
       case 'transcript':
-        // Tampilkan transkrip STT sementara
         transcript.textContent = '» ' + msg.data;
         transcript.classList.add('show');
         setTimeout(() => transcript.classList.remove('show'), 5000);
@@ -683,14 +752,11 @@ function connectWS() {
 
       case 'response':
         btn.classList.remove('busy');
-        // Tampilkan intent badge
         if (msg.meta && msg.meta.intent) showIntent(msg.meta.intent, msg.meta.skill);
-        // Putar audio (jika ada) + typing
         await playResponseAudio(msg.audio || '', msg.data || '');
         break;
 
-
-	  case 'status':
+      case 'status':
         setStatus('active', '⏳ ' + (msg.data || 'Memproses...'));
         break;
 
@@ -719,7 +785,14 @@ function showIntent(intent, skill) {
 async function initMic() {
   if (isMicGranted) return;
   try {
-    micStream    = await navigator.mediaDevices.getUserMedia({ audio: true });
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount:      1,
+        echoCancellation:  true,
+        noiseSuppression:  true,
+        autoGainControl:   true,
+      }
+    });
     isMicGranted = true;
     await ensureAudioCtx();
     micDot.classList.add('granted');
@@ -735,47 +808,8 @@ async function initMic() {
 }
 
 // ══════════════════════════════════════════════════════
-//  Rekam → kirim ke Otto
-//  Mode: record WebM → blob → base64 → WS JSON
+//  Rekam → konversi WAV → kirim
 // ══════════════════════════════════════════════════════
-
-async function blobToWav(blob) {
-  await ensureAudioCtx();
-  const arrayBuf = await blob.arrayBuffer();
-  const decoded  = await audioCtx.decodeAudioData(arrayBuf);
-  
-  // Ambil raw PCM dari channel pertama
-  const pcm      = decoded.getChannelData(0);
-  const rate     = decoded.sampleRate;
-  
-  // Buat WAV header + data
-  const numSamples = pcm.length;
-  const buf        = new ArrayBuffer(44 + numSamples * 2);
-  const view       = new DataView(buf);
-  
-  // WAV header
-  const w = (o, s) => { for (let i=0; i<s.length; i++) view.setUint8(o+i, s.charCodeAt(i)); };
-  w(0, 'RIFF'); view.setUint32(4, 36 + numSamples*2, true);
-  w(8, 'WAVE'); w(12, 'fmt ');
-  view.setUint32(16, 16, true);   // chunk size
-  view.setUint16(20, 1, true);    // PCM
-  view.setUint16(22, 1, true);    // mono
-  view.setUint32(24, rate, true);
-  view.setUint32(28, rate*2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  w(36, 'data'); view.setUint32(40, numSamples*2, true);
-  
-  // PCM data (float32 → int16)
-  for (let i=0; i<numSamples; i++) {
-    view.setInt16(44 + i*2, Math.max(-1, Math.min(1, pcm[i])) * 0x7FFF, true);
-  }
-  
-  return new Blob([buf], { type: 'audio/wav' });
-}
-
-
-
 async function startRec() {
   if (!isMicGranted || btn.classList.contains('speaking') || btn.classList.contains('busy')) return;
   if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -790,26 +824,50 @@ async function startRec() {
   chunks = [];
 
   try {
-    // SESUDAH — konversi ke WAV dulu di browser sebelum kirim
+    // Tidak paksa mimeType — biar browser pilih yang dia support
     mediaRecorder = new MediaRecorder(micStream);
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
     mediaRecorder.onstop = async () => {
-      const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
-      const wav  = await blobToWav(blob);   // konversi di browser
-      const b64  = await blobToBase64(wav);
+      const rawBlob = new Blob(chunks, { type: mediaRecorder.mimeType });
+      console.log('[audio] Format rekaman:', mediaRecorder.mimeType, rawBlob.size, 'bytes');
+
+      btn.classList.add('busy');
+      btn.classList.remove('recording');
+      setEmoji(STATE_EMOJI.THINKING.e, STATE_EMOJI.THINKING.l);
+      setStatus('active', '⚙️ Memproses audio...');
+
+      let wavBlob;
+      try {
+        wavBlob = await convertToWav(rawBlob);
+      } catch (err) {
+        console.error('[audio] Konversi gagal:', err);
+        setStatus('', '⚠️ Gagal konversi audio');
+        btn.classList.remove('busy');
+        btn.classList.add('ready');
+        setEmoji(STATE_EMOJI.IDLE.e, STATE_EMOJI.IDLE.l);
+        return;
+      }
+
+      // Verifikasi header WAV sebelum kirim
+      const headerCheck = await wavBlob.slice(0, 4).text();
+      console.log('[audio] Header WAV:', headerCheck); // harus "RIFF"
+
+      const b64 = await blobToBase64(wavBlob);
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'audio', data: b64 }));
-        btn.classList.add('busy');
-        btn.classList.remove('recording');
-        setEmoji(STATE_EMOJI.THINKING.e, STATE_EMOJI.THINKING.l);
-        setStatus('active', '⚙️ Memproses...');
+        setStatus('active', '⚙️ Mengirim...');
       }
     };
+
     mediaRecorder.start();
     btn.classList.add('recording');
     btn.classList.remove('ready');
     setEmoji(STATE_EMOJI.RECORDING.e, STATE_EMOJI.RECORDING.l);
     setStatus('rec', '🔴 Mendengarkan...');
-  } catch {
+
+  } catch (err) {
+    console.error('[audio] startRec error:', err);
     setStatus('', '❌ Gagal mengakses mic');
   }
 }
@@ -819,8 +877,6 @@ function stopRec() {
   if (mediaRecorder && mediaRecorder.state !== 'inactive') {
     mediaRecorder.stop();
     if (navigator.vibrate) navigator.vibrate(15);
-    btn.classList.remove('recording');
-    btn.classList.add('ready');
   }
 }
 
@@ -838,13 +894,12 @@ function setStatus(cls, text) {
   statusEl.className = cls || '';
   statusEl.textContent = text;
 }
-
 function setWsStatus(cls, text) {
   wsStatusEl.className = cls;
   wsStatusTxt.textContent = text;
 }
 
-// ── Events ─────────────────────────────────────────────
+// ── Events ────────────────────────────────────────────
 micWrap.addEventListener('click',    initMic);
 micWrap.addEventListener('touchend', e => { e.preventDefault(); initMic(); });
 
@@ -878,7 +933,7 @@ respWrap.addEventListener('touchmove',  e => e.stopPropagation(), { passive: tru
     ctx.beginPath();
     const step = (Math.PI * 2) / points;
     for (let i = 0; i <= points; i++) {
-      const angle = i * step;
+      const angle  = i * step;
       const wobble = 1 + 0.22 * Math.sin(i * 2.3 + t * 1.7) + 0.1 * Math.cos(i * 3.7 + t * 2.1);
       const x = cx + Math.cos(angle) * r * wobble;
       const y = cy + Math.sin(angle) * r * wobble;
@@ -892,7 +947,7 @@ respWrap.addEventListener('touchmove',  e => e.stopPropagation(), { passive: tru
   function loopBlob() {
     const isRec = btn.classList.contains('recording');
     const isSpk = btn.classList.contains('speaking');
-    if (!isRec && !isSpk) { blobRafId = null; ctx.clearRect(0,0,W,H); return; }
+    if (!isRec && !isSpk) { blobRafId = null; ctx.clearRect(0, 0, W, H); return; }
     ctx.clearRect(0, 0, W, H);
     t += 0.016;
     const blobs = isRec ? BLOBS_REC : BLOBS_SPK;
@@ -904,7 +959,6 @@ respWrap.addEventListener('touchmove',  e => e.stopPropagation(), { passive: tru
     blobRafId = requestAnimationFrame(loopBlob);
   }
 
-  // Watch for class changes on btn to trigger blob
   const observer = new MutationObserver(() => {
     const isActive = btn.classList.contains('recording') || btn.classList.contains('speaking');
     if (isActive && !blobRafId) loopBlob();

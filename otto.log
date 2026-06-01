@@ -410,3 +410,14 @@ To github.com:moroxixi/otto-ai.git
 16:50 [Git] Push berhasil: auto: 2026-06-01 16:50
 18:44 [Syntax] Semua file Python OK.
 18:44 [Tree] generate_tree.sh tidak ditemukan, skip.
+To github.com:moroxixi/otto-ai.git
+   ac40679..c08a392  main -> main
+18:44 [Git] Push berhasil: auto: 2026-06-01 18:44
+21:01 [Syntax] ERROR ditemukan:
+/data/asd/otto-ai/server/app.py:   File "/data/asd/otto-ai/server/app.py", line 1
+    server/app.py — Entry Point Otto
+                  ^
+SyntaxError: invalid character '—' (U+2014)
+
+21:02 [Syntax] Semua file Python OK.
+21:02 [Tree] generate_tree.sh tidak ditemukan, skip.

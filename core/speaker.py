@@ -1,11 +1,12 @@
 # core/speaker.py
 """
-Speaker Otto — TTS dengan Kokoro ONNX
-======================================
+Speaker Otto — TTS dengan Kokoro ONNX + Piper PCM Streaming
+=============================================================
 Mode output:
-  - synthesize(text)          → return bytes WAV (untuk dikirim ke iPhone via WS)
-  - speak_local(text)         → putar langsung di speaker laptop (pw-play)
-  - synthesize_or_speak(text, output="ws"|"laptop"|"both")
+  - synthesize(text)              → return bytes WAV (fallback / non-streaming)
+  - speak_local(text)             → putar langsung di speaker laptop (pw-play)
+  - synthesize_or_speak(...)      → routing ws / laptop / both
+  - stream_to_ws(ws, text)        → stream raw PCM chunks ke WebSocket (seperti Libo)
 """
 
 from __future__ import annotations
@@ -22,20 +23,33 @@ import soundfile as sf
 
 logger = logging.getLogger("otto.speaker")
 
+# ── Konstanta PCM streaming (sama persis seperti Libo) ───────────────────────
+PIPER_SAMPLE_RATE   = 22050
+PIPER_CHANNELS      = 1
+PIPER_SAMPLE_WIDTH  = 2          # 16-bit PCM
+# ~0.5 detik per chunk raw bytes
+CHUNK_BYTES         = int(PIPER_SAMPLE_RATE * PIPER_CHANNELS * PIPER_SAMPLE_WIDTH * 0.5)
+PREBUFFER_CHUNKS    = 3          # kumpulkan dulu sebelum mulai stream
+SILENCE_PADDING_MS  = 1200       # ms silence di akhir agar kata terakhir tidak terpotong
+
 
 class Speaker:
     def __init__(self):
-        from core.config import KOKORO, AUDIO
+        from core.config import KOKORO, AUDIO, PIPER
         from kokoro_onnx import Kokoro
+
+        self._piper_bin    = str(PIPER["binary"])
+        self._piper_model  = str(PIPER["model"])
 
         model_path  = str(KOKORO["model"])
         voices_path = str(KOKORO["voices"])
 
-        self._kokoro = Kokoro(model_path, voices_path)
-        self._voice  = KOKORO["voice"]
-        self._speed  = KOKORO["speed"]
-        self._lang   = KOKORO["lang"]
+        self._kokoro   = Kokoro(model_path, voices_path)
+        self._voice    = KOKORO["voice"]
+        self._speed    = KOKORO["speed"]
+        self._lang     = KOKORO["lang"]
         self._play_cmd = AUDIO.get("play_cmd", "pw-play")
+        self._sink_id  = AUDIO.get("sink_id", 58)
 
         logger.info(
             "Kokoro TTS siap — voice=%s speed=%.1f lang=%s",
@@ -46,20 +60,14 @@ class Speaker:
     # ── Public API ────────────────────────────────────────────────────────────
 
     def synthesize(self, text: str) -> bytes:
-        """
-        Generate audio → return WAV bytes.
-        Dipakai untuk kirim ke iPhone via WebSocket.
-        """
+        """Generate audio → return WAV bytes. Untuk fallback non-streaming."""
         if not text.strip():
             return b""
         samples, sr = self._generate(text)
         return self._to_wav_bytes(samples, sr)
 
     def speak_local(self, text: str) -> None:
-        """
-        Generate audio → putar langsung via pw-play di laptop.
-        Dipakai untuk output proaktif Otto (bukan lewat iPhone).
-        """
+        """Generate audio → putar langsung via pw-play di laptop."""
         if not text.strip():
             return
         samples, sr = self._generate(text)
@@ -70,37 +78,141 @@ class Speaker:
         """Async wrapper untuk speak_local — agar tidak block event loop."""
         await asyncio.to_thread(self.speak_local, text)
 
-    def synthesize_or_speak(
-        self,
-        text: str,
-        output: str = "ws",
-    ) -> bytes:
+    def synthesize_or_speak(self, text: str, output: str = "ws") -> bytes:
         """
-        output="ws"     → return WAV bytes (untuk WebSocket)
+        output="ws"     → return WAV bytes
         output="laptop" → putar lokal, return b""
         output="both"   → putar lokal DAN return WAV bytes
         """
         if not text.strip():
             return b""
-
         samples, sr = self._generate(text)
         wav_bytes = self._to_wav_bytes(samples, sr)
-
         if output in ("laptop", "both"):
             self._play_bytes_local(wav_bytes)
-
         if output in ("ws", "both"):
             return wav_bytes
-
         return b""
 
+    async def stream_to_ws(self, websocket, text: str) -> None:
+        """
+        Stream raw PCM dari Piper langsung ke WebSocket — persis seperti Libo.
+
+        Protocol:
+          → send_json {"type": "audio_stream_start"}
+          → send_bytes <pcm_chunk> × N
+          → send_bytes <silence_padding>
+          → send_json {"type": "audio_stream_end"}
+
+        Client harus siap terima bytes (bukan base64).
+        Prebuffer 3 chunk sebelum mulai stream agar tidak ada glitch di awal.
+        """
+        if not text.strip():
+            return
+
+        logger.info("[speaker] Stream PCM TTS: '%s'", text[:60])
+
+        proc = await asyncio.create_subprocess_exec(
+            self._piper_bin,
+            "--model",           self._piper_model,
+            "--output-raw",
+            "--sentence-silence", "0.3",
+            stdin  = asyncio.subprocess.PIPE,
+            stdout = asyncio.subprocess.PIPE,
+            stderr = asyncio.subprocess.DEVNULL,
+        )
+
+        proc.stdin.write(text.encode("utf-8"))
+        await proc.stdin.drain()
+        proc.stdin.close()
+
+        prebuffer_list: list[bytes] = []
+        stream_started = False
+        chunk_count    = 0
+
+        try:
+            while True:
+                pcm = await proc.stdout.read(CHUNK_BYTES)
+                if not pcm:
+                    break
+
+                if not stream_started:
+                    prebuffer_list.append(pcm)
+                    if len(prebuffer_list) >= PREBUFFER_CHUNKS:
+                        await websocket.send_json({"type": "audio_stream_start"})
+                        stream_started = True
+                        for chunk in prebuffer_list:
+                            await websocket.send_bytes(chunk)
+                            chunk_count += 1
+                        prebuffer_list = []
+                else:
+                    await websocket.send_bytes(pcm)
+                    chunk_count += 1
+
+            # Flush sisa prebuffer kalau teks sangat pendek
+            if not stream_started:
+                await websocket.send_json({"type": "audio_stream_start"})
+                for chunk in prebuffer_list:
+                    await websocket.send_bytes(chunk)
+                    chunk_count += 1
+
+            # ── Silence padding — kata terakhir tidak terpotong ──────────
+            silence_frames = int(PIPER_SAMPLE_RATE * SILENCE_PADDING_MS / 1000)
+            silence_bytes  = b'\x00' * (silence_frames * PIPER_CHANNELS * PIPER_SAMPLE_WIDTH)
+            for i in range(0, len(silence_bytes), CHUNK_BYTES):
+                await websocket.send_bytes(silence_bytes[i:i + CHUNK_BYTES])
+
+        finally:
+            await proc.wait()
+            await websocket.send_json({"type": "audio_stream_end"})
+            logger.info(
+                "[speaker] Stream selesai: %d chunk + %dms silence.",
+                chunk_count, SILENCE_PADDING_MS
+            )
+
+    async def ucapkan_laptop_async(self, text: str) -> None:
+        """
+        Putar TTS di speaker laptop via Piper → pw-play.
+        Dipakai untuk output proaktif Otto (bukan lewat iPhone).
+        """
+        if not text.strip():
+            return
+
+        import uuid
+        wav_path = f"/tmp/otto_laptop_{uuid.uuid4().hex[:8]}.wav"
+        try:
+            proc_piper = await asyncio.create_subprocess_exec(
+                self._piper_bin,
+                "--model", self._piper_model,
+                "--output_file", wav_path,
+                stdin  = asyncio.subprocess.PIPE,
+                stdout = asyncio.subprocess.DEVNULL,
+                stderr = asyncio.subprocess.DEVNULL,
+            )
+            await proc_piper.communicate(text.encode("utf-8"))
+
+            if not Path(wav_path).exists() or Path(wav_path).stat().st_size == 0:
+                logger.warning("[speaker] Piper gagal buat WAV untuk laptop.")
+                return
+
+            proc_play = await asyncio.create_subprocess_exec(
+                self._play_cmd,
+                "--target", str(self._sink_id),
+                wav_path,
+                stdout = asyncio.subprocess.DEVNULL,
+                stderr = asyncio.subprocess.DEVNULL,
+            )
+            await proc_play.wait()
+        except Exception as e:
+            logger.error("[speaker] ucapkan_laptop_async gagal: %s", e)
+        finally:
+            Path(wav_path).unlink(missing_ok=True)
+
     def set_voice(self, voice: str) -> None:
-        """Ganti voice on-the-fly."""
         self._voice = voice
         logger.info("Voice diganti ke: %s", voice)
 
     def list_voices(self) -> list[str]:
-        """Daftar semua voice yang tersedia di file bin."""
         try:
             return self._kokoro.get_voices()
         except Exception:
@@ -109,27 +221,23 @@ class Speaker:
     # ── Internal ──────────────────────────────────────────────────────────────
 
     def _generate(self, text: str):
-        """Panggil Kokoro → return (samples: np.ndarray, sample_rate: int)."""
+        """Kokoro → (samples: np.ndarray, sample_rate: int)."""
         try:
-            samples, sr = self._kokoro.create(
+            return self._kokoro.create(
                 text,
-                voice=self._voice,
-                speed=self._speed,
-                lang=self._lang,
+                voice = self._voice,
+                speed = self._speed,
+                lang  = self._lang,
             )
-            return samples, sr
         except Exception as e:
             logger.error("Kokoro gagal generate audio: %s", e)
             raise
 
     def _to_wav_bytes(self, samples: np.ndarray, sr: int) -> bytes:
-        """Convert numpy samples → WAV bytes in-memory."""
         buf = io.BytesIO()
         sf.write(buf, samples, sr, format="WAV", subtype="PCM_16")
         buf.seek(0)
         return buf.read()
-
-
 
     def _play_bytes_local(self, wav_bytes: bytes) -> None:
         tmp_path = None
@@ -137,24 +245,21 @@ class Speaker:
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
                 f.write(wav_bytes)
                 tmp_path = f.name
-
-            # ← GANTI subprocess.run → Popen agar bisa di-track
             proc = subprocess.Popen(
                 [self._play_cmd, tmp_path],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
+                stdout = subprocess.DEVNULL,
+                stderr = subprocess.PIPE,
             )
             self._active_procs.append(proc)
-            proc.wait()  # tunggu selesai (sama seperti run, tapi bisa di-interrupt)
+            proc.wait()
             self._active_procs = [p for p in self._active_procs if p.poll() is None]
-
         except Exception as e:
             logger.error("Gagal putar audio lokal: %s", e)
         finally:
-            if tmp_path:                         # ← UBAH ini
+            if tmp_path:
                 Path(tmp_path).unlink(missing_ok=True)
+
     def shutdown(self) -> None:
-        """Matikan semua subprocess audio yang masih jalan."""
         killed = 0
         for proc in self._active_procs:
             if proc.poll() is None:
