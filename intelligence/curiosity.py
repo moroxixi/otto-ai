@@ -57,9 +57,6 @@ MIN_GAP_MINUTES = 90
 # Maksimal berapa kali satu hipotesis boleh ditanyakan sebelum diabaikan
 MAX_ASKED_COUNT = 2
 
-# Confidence minimum sebelum Otto berani tanya
-MIN_CONFIDENCE = 0.4
-
 # Waktu "aman" untuk bertanya (jam lokal) — Otto tidak tanya pas Rofi sibuk
 SAFE_HOURS = list(range(8, 12)) + list(range(14, 17)) + list(range(19, 22))
 
@@ -188,6 +185,19 @@ class Curiosity:
        self._pending_hypothesis_id = None
        self._save_state()
        return verdict
+
+
+
+    def _get_min_confidence() -> float:
+        """
+        Hitung MIN_CONFIDENCE dari personality boldness.
+        boldness 0.0 → min_confidence 0.2 (berani tanya meski belum yakin)
+        boldness 1.0 → min_confidence 0.7 (hanya tanya kalau sangat yakin)
+        """
+        from core.config import INTELLIGENCE
+        boldness = INTELLIGENCE.get("curiosity_boldness", 0.5)
+        boldness = max(0.0, min(1.0, boldness))  # clamp 0–1
+        return 0.2 + (boldness * 0.5)  # range: 0.2–0.7
         
 
             
@@ -218,7 +228,7 @@ class Curiosity:
         """
         candidates = [
             h for h in self._profiler.get_pending()
-            if h.confidence >= MIN_CONFIDENCE
+            if h.confidence >= _get_min_confidence()
             and h.asked_count < MAX_ASKED_COUNT
         ]
 

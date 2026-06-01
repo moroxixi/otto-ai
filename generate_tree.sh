@@ -87,58 +87,36 @@ HEADER
 # ─── Status tiap file ─────────────────────────────────────────────────────────
 echo "" >> "$OUTPUT"
 
-check_file() {
-    local filepath="$1"
-    local label="$2"
-    if [ -f "$BASE/$filepath" ]; then
-        local size=$(wc -l < "$BASE/$filepath" 2>/dev/null)
-        local mtime=$(stat -c "%Y" "$BASE/$filepath" 2>/dev/null)
+# ─── Status tiap file — DYNAMIC ───────────────────────────────────────────────
+
+scan_folder() {
+    local label="$1"
+    local folder="$2"
+    echo "" >> "$OUTPUT"
+    echo "[ $label ]" >> "$OUTPUT"
+    
+    # Scan semua .py dan .json di folder, sort alfabetis
+    find "$BASE/$folder" -maxdepth 1 \( -name "*.py" -o -name "*.json" \) 2>/dev/null | sort | while read -r filepath; do
+        local relpath="${filepath#$BASE/}"
+        local size=$(wc -l < "$filepath" 2>/dev/null)
+        local mtime=$(stat -c "%Y" "$filepath" 2>/dev/null)
         local age=$(( ($(date +%s) - mtime) / 3600 ))
-        printf "  %-40s ✓ %4d baris  (${age}j lalu)\n" "$label" "$size" >> "$OUTPUT"
-    else
-        printf "  %-40s ✗ belum dibuat\n" "$label" >> "$OUTPUT"
+        printf "  %-40s ✓ %4d baris  (${age}j lalu)\n" "$relpath" "$size" >> "$OUTPUT"
+    done
+    
+    # Jika folder kosong / tidak ada file
+    local count=$(find "$BASE/$folder" -maxdepth 1 \( -name "*.py" -o -name "*.json" \) 2>/dev/null | wc -l)
+    if [ "$count" -eq 0 ]; then
+        echo "  (belum ada file)" >> "$OUTPUT"
     fi
 }
 
-echo "[ CORE ]" >> "$OUTPUT"
-check_file "core/config.py"        "core/config.py"
-check_file "core/memory.py"        "core/memory.py"
-check_file "core/transcriber.py"   "core/transcriber.py"
-check_file "core/speaker.py"       "core/speaker.py"
-check_file "core/brain.py"         "core/brain.py"
-check_file "core/executor.py"      "core/executor.py"
-
-echo "" >> "$OUTPUT"
-echo "[ SERVER ]" >> "$OUTPUT"
-check_file "server/app.py"              "server/app.py"
-check_file "server/websocket.py"        "server/websocket.py"
-check_file "server/static/index.html"   "server/static/index.html"
-
-echo "" >> "$OUTPUT"
-echo "[ SKILLS ]" >> "$OUTPUT"
-check_file "skills/system.py"     "skills/system.py"
-check_file "skills/media.py"      "skills/media.py"
-check_file "skills/reminder.py"   "skills/reminder.py"
-
-echo "" >> "$OUTPUT"
-echo "[ INTELLIGENCE ]" >> "$OUTPUT"
-check_file "intelligence/activity_watcher.py"  "intelligence/activity_watcher.py"
-check_file "intelligence/profiler.py"           "intelligence/profiler.py"
-check_file "intelligence/curiosity.py"          "intelligence/curiosity.py"
-check_file "intelligence/scheduler.py"          "intelligence/scheduler.py"
-
-echo "" >> "$OUTPUT"
-echo "[ SELF ]" >> "$OUTPUT"
-check_file "self/model.py"           "self/model.py"
-check_file "self/github_checker.py"  "self/github_checker.py"
-
-echo "" >> "$OUTPUT"
-echo "[ DATA ]" >> "$OUTPUT"
-check_file "data/memory.json"      "data/memory.json"
-check_file "data/profile.json"     "data/profile.json"
-check_file "data/hypotheses.json"  "data/hypotheses.json"
-check_file "data/activity.log"     "data/activity.log"
-
+scan_folder "CORE"         "core"
+scan_folder "SERVER"       "server"
+scan_folder "SKILLS"       "skills"
+scan_folder "INTELLIGENCE" "intelligence"
+scan_folder "SELF"         "self"
+scan_folder "DATA"         "data"
 # ─── Tree folder ──────────────────────────────────────────────────────────────
 cat >> "$OUTPUT" << 'TREE_HEADER'
 

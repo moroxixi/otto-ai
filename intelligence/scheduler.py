@@ -14,24 +14,21 @@ Arsitektur:
   │  Task Loop:                                  │
   │    [tick]  setiap 60 detik                   │
   │      ├─ activity_watcher.flush()  (5 menit) │
-  │      ├─ profiler.analyze()        (15 menit)│
-  │      ├─ curiosity.try_ask()       (30 menit)│
+  │      ├─ profiler.analyze()        (malam)   │  ← sekali sehari jam 22
+  │      ├─ curiosity.try_ask()       (30 menit)│  ← hanya jika profiler sudah analyze
   │      └─ self_check()              (6 jam)   │
   └─────────────────────────────────────────────┘
 
-Cara integrasi (dari app.py):
-    from intelligence.scheduler import Scheduler
-    scheduler = Scheduler(activity_watcher, profiler, curiosity)
-    await scheduler.start()          # non-blocking, jalan di background
-    ...
-    await scheduler.stop()           # saat shutdown
+Filosofi Otto:
+  Amati seharian → profiler analyze malam → curiosity tanya keesokan hari
+  Bukan asisten reaktif — Otto belajar dari ritme Rofi secara alami.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Optional, Callable, Awaitable
 
 logger = logging.getLogger("otto.intelligence.scheduler")
@@ -39,34 +36,26 @@ logger = logging.getLogger("otto.intelligence.scheduler")
 
 # ──────────────────────────── Konfigurasi ────────────────────────────────────
 
-# Interval tiap task (dalam detik)
 INTERVALS = {
-    "activity_flush":   5  * 60,   # 5 menit  — flush log aktivitas ke disk
-    "profile_analyze":  15 * 60,   # 15 menit — profiler analisis pola baru
-    "curiosity_check":  30 * 60,   # 30 menit — cek apakah ada hipotesis siap ditanya
-    "self_check":       6  * 3600, # 6 jam    — cek kesehatan sistem Otto sendiri
+    "activity_flush":   5  * 60,    # 5 menit  — flush log aktivitas ke disk
+    "profile_analyze":  23 * 3600,  # 23 jam   — guard tambahan: hanya jam malam
+    "curiosity_check":  30 * 60,    # 30 menit — guard: hanya jika profiler sudah jalan
+    "self_check":       6  * 3600,  # 6 jam    — cek kesehatan sistem
+    "growth_daily":     24 * 3600,  # 24 jam   — update riwayat pertumbuhan
 }
 
-# Tick interval — seberapa sering scheduler "bangun" dan cek jadwal
 TICK_SECONDS = 60
 
-# Jika Rofi baru selesai ngobrol, tunggu dulu sebelum tanya
-# (agar tidak terasa diinterupsi)
-POST_CONVERSATION_COOLDOWN = 5 * 60  # 5 menit
+# Profiler hanya analyze mulai jam ini (malam hari)
+NIGHTLY_ANALYZE_HOUR = 22
+
+# Jeda setelah percakapan sebelum curiosity boleh tanya
+POST_CONVERSATION_COOLDOWN = 5 * 60
 
 
 # ──────────────────────────── Scheduled Task ─────────────────────────────────
 
 class ScheduledTask:
-    """
-    Representasi satu task yang dijadwalkan.
-
-    name       : nama unik task (untuk logging)
-    interval   : seberapa sering dijalankan (detik)
-    fn         : coroutine yang dipanggil
-    run_at_start: langsung jalankan saat scheduler start?
-    """
-
     def __init__(
         self,
         name: str,
@@ -83,15 +72,11 @@ class ScheduledTask:
         self._error_count  = 0
 
     def is_due(self, now: datetime) -> bool:
-        """Apakah task ini sudah waktunya dijalankan?"""
         if self._last_run is None:
             return self.run_at_start
         return (now - self._last_run).total_seconds() >= self.interval
 
     async def run(self) -> bool:
-        """
-        Jalankan task. Return True jika sukses, False jika error.
-        """
         try:
             await self.fn()
             self._last_run  = datetime.now()
@@ -104,7 +89,6 @@ class ScheduledTask:
                 "[scheduler] ✗ %s error (ke-%d): %s",
                 self.name, self._error_count, e, exc_info=True,
             )
-            # Tetap update last_run agar tidak loop terus saat error
             self._last_run = datetime.now()
             return False
 
@@ -122,19 +106,6 @@ class ScheduledTask:
 # ──────────────────────────── Scheduler ──────────────────────────────────────
 
 class Scheduler:
-    """
-    Background scheduler untuk Otto.
-
-    Menjalankan task-task intelligence secara periodik
-    sambil tetap aware terhadap konteks (Rofi sedang ngobrol atau tidak).
-
-    Penggunaan:
-        scheduler = Scheduler(activity_watcher, profiler, curiosity)
-        await scheduler.start()
-        # ... Otto berjalan ...
-        await scheduler.stop()
-    """
-
     def __init__(self, activity_watcher, profiler, curiosity) -> None:
         self._activity_watcher = activity_watcher
         self._profiler         = profiler
@@ -144,19 +115,18 @@ class Scheduler:
         self._loop_task: Optional[asyncio.Task] = None
         self._tasks: list[ScheduledTask] = []
 
-        # Waktu terakhir Rofi aktif ngobrol
         self._last_conversation_at: Optional[datetime] = None
-
-        # Callback opsional — dipanggil saat curiosity punya pertanyaan
-        # Signature: async def on_question(question: str, hyp_id: str) -> None
         self._on_question_cb: Optional[Callable] = None
+
+        # Tracking analyze harian
+        self._last_analyze_date: Optional[str] = None
+        self._profiler_analyzed_today: bool = False
 
         self._register_tasks()
 
-    # ── Setup ──────────────────────────────────────────────────────────────────
+    # ── Setup ─────────────────────────────────────────────────────────────────
 
     def _register_tasks(self) -> None:
-        """Daftarkan semua scheduled task."""
         self._tasks = [
             ScheduledTask(
                 name         = "activity_flush",
@@ -184,7 +154,7 @@ class Scheduler:
             ),
             ScheduledTask(
                 name         = "growth_daily",
-                interval     = 24 * 3600,   # setiap 24 jam
+                interval     = INTERVALS["growth_daily"],
                 fn           = self._task_growth_daily,
                 run_at_start = False,
             ),
@@ -192,52 +162,14 @@ class Scheduler:
         logger.info("[scheduler] %d task terdaftar.", len(self._tasks))
 
     def set_question_callback(self, cb: Callable) -> None:
-        """
-        Set callback yang dipanggil saat curiosity menghasilkan pertanyaan.
-
-        Contoh:
-            async def kirim_ke_rofi(question, hyp_id):
-                await speaker.speak(question)
-
-            scheduler.set_question_callback(kirim_ke_rofi)
-        """
         self._on_question_cb = cb
 
-
-
-
-
-
-    async def _task_growth_daily(self) -> None:
-        """Update riwayat pertumbuhan harian."""
-        from intelligence.growth_tracker import get_tracker
-        try:
-            tracker = get_tracker()
-            summary = tracker.daily_update(
-                memory   = getattr(self, '_memory', None),
-                profiler = self._profiler,
-            )
-            logger.info(
-                "[scheduler] Growth daily: +%d hari ini | kumulatif: %d | %s",
-                summary.get('score_today', 0),
-                summary.get('cumulative', 0),
-                summary.get('milestone', ('?', ''))[0],
-            )
-        except Exception as e:
-            logger.error("[scheduler] growth_daily error: %s", e)
-
-
-    # ── Lifecycle ──────────────────────────────────────────────────────────────
+    # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     async def start(self) -> None:
-        """
-        Mulai scheduler di background.
-        Non-blocking — langsung return setelah task dimulai.
-        """
         if self._running:
             logger.warning("[scheduler] Sudah berjalan, skip start.")
             return
-
         self._running   = True
         self._loop_task = asyncio.create_task(
             self._main_loop(), name="otto.scheduler"
@@ -245,13 +177,8 @@ class Scheduler:
         logger.info("[scheduler] Dimulai. Tick setiap %d detik.", TICK_SECONDS)
 
     async def stop(self) -> None:
-        """
-        Stop scheduler dengan bersih.
-        Tunggu tick selesai sebelum keluar.
-        """
         if not self._running:
             return
-
         self._running = False
         if self._loop_task and not self._loop_task.done():
             self._loop_task.cancel()
@@ -259,7 +186,6 @@ class Scheduler:
                 await self._loop_task
             except asyncio.CancelledError:
                 pass
-
         logger.info("[scheduler] Dihentikan.")
 
     @property
@@ -269,23 +195,23 @@ class Scheduler:
     # ── Main Loop ─────────────────────────────────────────────────────────────
 
     async def _main_loop(self) -> None:
-        """Loop utama — bangun setiap TICK_SECONDS dan cek task."""
         logger.info("[scheduler] Loop mulai.")
-
         while self._running:
             try:
                 await self._tick()
             except Exception as e:
-                # Loop tidak boleh mati karena satu error
                 logger.error("[scheduler] Error di tick: %s", e, exc_info=True)
-
             await asyncio.sleep(TICK_SECONDS)
-
         logger.info("[scheduler] Loop selesai.")
 
     async def _tick(self) -> None:
-        """Satu siklus tick — cek dan jalankan task yang sudah waktunya."""
-        now = datetime.now()
+        now       = datetime.now()
+        today_str = date.today().isoformat()
+
+        # Reset flag jika hari sudah berganti
+        if self._last_analyze_date and self._last_analyze_date != today_str:
+            self._profiler_analyzed_today = False
+            logger.debug("[scheduler] Hari baru — reset profiler_analyzed_today.")
 
         for task in self._tasks:
             if not self._running:
@@ -294,11 +220,9 @@ class Scheduler:
             if not task.is_due(now):
                 continue
 
-            # Curiosity punya aturan tambahan: tidak saat Rofi baru ngobrol
+            # Curiosity tidak jalan saat cooldown
             if task.name == "curiosity_check" and self._in_cooldown():
-                logger.debug(
-                    "[scheduler] curiosity_check skip — Rofi baru selesai ngobrol."
-                )
+                logger.debug("[scheduler] curiosity_check skip — cooldown aktif.")
                 continue
 
             logger.debug("[scheduler] Jalankan task: %s", task.name)
@@ -307,21 +231,16 @@ class Scheduler:
     # ── Konteks Awareness ─────────────────────────────────────────────────────
 
     def notify_conversation_active(self) -> None:
-        """
-        Dipanggil oleh app.py saat Rofi mulai/sedang ngobrol.
-        Scheduler akan tunda curiosity_check selama cooldown.
-        """
         self._last_conversation_at = datetime.now()
         logger.debug("[scheduler] Rofi aktif ngobrol — curiosity_check ditunda.")
 
     def _in_cooldown(self) -> bool:
-        """True jika masih dalam cooldown setelah percakapan."""
         if self._last_conversation_at is None:
             return False
         elapsed = (datetime.now() - self._last_conversation_at).total_seconds()
         return elapsed < POST_CONVERSATION_COOLDOWN
 
-    # ── Task Implementations ──────────────────────────────────────────────────
+    # ── Task: Activity Flush ──────────────────────────────────────────────────
 
     async def _task_activity_flush(self) -> None:
         """Flush buffer aktivitas ke disk."""
@@ -331,68 +250,123 @@ class Scheduler:
             self._activity_watcher.save()
         logger.debug("[scheduler] activity_flush selesai.")
 
+    # ── Task: Profile Analyze (MALAM HARI) ───────────────────────────────────
+
     async def _task_profile_analyze(self) -> None:
-        """Profiler analisis ulang pola dari log aktivitas terbaru."""
-        if hasattr(self._profiler, "analyze"):
-            result = await self._profiler.analyze() if asyncio.iscoroutinefunction(
-                self._profiler.analyze
-            ) else self._profiler.analyze()
-            new_hypotheses = result if isinstance(result, int) else 0
-            if new_hypotheses:
-                logger.info(
-                    "[scheduler] Profiler: %d hipotesis baru ditemukan.", new_hypotheses
-                )
-        logger.debug("[scheduler] profile_analyze selesai.")
+        """
+        Profiler analyze — hanya jalan malam hari (jam >= NIGHTLY_ANALYZE_HOUR)
+        dan hanya sekali per hari.
+
+        Filosofi: Otto amati seharian penuh, baru simpulkan malam.
+        Keesokan harinya curiosity bisa tanya berdasarkan pola kemarin.
+        """
+        now       = datetime.now()
+        today_str = date.today().isoformat()
+
+        # Guard 1: hanya jam malam
+        if now.hour < NIGHTLY_ANALYZE_HOUR:
+            logger.debug(
+                "[scheduler] profile_analyze skip — belum jam %02d:00 (sekarang %02d:%02d).",
+                NIGHTLY_ANALYZE_HOUR, now.hour, now.minute,
+            )
+            return
+
+        # Guard 2: sudah jalan hari ini?
+        if self._last_analyze_date == today_str:
+            logger.debug("[scheduler] profile_analyze skip — sudah jalan hari ini (%s).", today_str)
+            return
+
+        # Jalankan analyze
+        if not hasattr(self._profiler, "analyze"):
+            return
+
+        if asyncio.iscoroutinefunction(self._profiler.analyze):
+            result = await self._profiler.analyze()
+        else:
+            result = self._profiler.analyze()
+
+        new_count = len(result) if isinstance(result, list) else 0
+
+        self._last_analyze_date       = today_str
+        self._profiler_analyzed_today = True
+
+        logger.info(
+            "[scheduler] Profiler malam (%s): %d hipotesis baru ditemukan.",
+            today_str, new_count,
+        )
+
+    # ── Task: Curiosity Check ─────────────────────────────────────────────────
 
     async def _task_curiosity_check(self) -> None:
-        """Cek apakah ada hipotesis siap ditanyakan ke Rofi."""
+        """
+        Curiosity kirim pertanyaan ke Rofi.
+
+        Guard: hanya jalan jika profiler sudah analyze hari ini.
+        Artinya: curiosity hanya punya bahan segar setelah malam analyze.
+        """
+        if not self._profiler_analyzed_today:
+            logger.debug(
+                "[scheduler] curiosity_check skip — profiler belum analyze hari ini."
+            )
+            return
+
         question, hyp_id = await self._curiosity.try_ask()
 
         if question and hyp_id:
-            logger.info(
-                "[scheduler] Curiosity siap tanya hipotesis %s.", hyp_id
-            )
+            logger.info("[scheduler] Curiosity siap tanya hipotesis %s.", hyp_id)
             if self._on_question_cb:
                 await self._on_question_cb(question, hyp_id)
             else:
-                # Tidak ada callback — log saja
                 logger.warning(
                     "[scheduler] Tidak ada question_callback. "
-                    "Set via scheduler.set_question_callback(). "
-                    "Pertanyaan: '%s'", question,
+                    "Set via set_question_callback(). Pertanyaan: '%s'", question,
                 )
 
+    # ── Task: Self Check ──────────────────────────────────────────────────────
+
     async def _task_self_check(self) -> None:
-        """
-        Cek kesehatan sistem Otto — placeholder untuk self/model.py nanti.
-        Untuk sekarang: log statistik scheduler.
-        """
         stats = self.get_stats()
         logger.info(
-            "[scheduler] Self-check: %d task, total run: %d",
+            "[scheduler] Self-check: %d task, total run: %d, error: %d",
             stats["task_count"],
             stats["total_runs"],
+            stats["total_errors"],
         )
+
+    # ── Task: Growth Daily ────────────────────────────────────────────────────
+
+    async def _task_growth_daily(self) -> None:
+        """Update riwayat pertumbuhan harian."""
+        from intelligence.growth_tracker import get_tracker
+        try:
+            tracker = get_tracker()
+            summary = tracker.daily_update(
+                memory   = getattr(self, "_memory", None),
+                profiler = self._profiler,
+            )
+            logger.info(
+                "[scheduler] Growth daily: +%d hari ini | kumulatif: %d | %s",
+                summary.get("score_today", 0),
+                summary.get("cumulative", 0),
+                summary.get("milestone", ("?",))[0],
+            )
+        except Exception as e:
+            logger.error("[scheduler] growth_daily error: %s", e)
 
     # ── Utilitas ──────────────────────────────────────────────────────────────
 
     def get_stats(self) -> dict:
-        """Statistik semua task — berguna untuk debugging / monitoring."""
         return {
-            "running":     self._running,
-            "task_count":  len(self._tasks),
-            "total_runs":  sum(t._run_count for t in self._tasks),
-            "total_errors": sum(t._error_count for t in self._tasks),
-            "tasks":       [t.stats for t in self._tasks],
+            "running":        self._running,
+            "task_count":     len(self._tasks),
+            "total_runs":     sum(t._run_count  for t in self._tasks),
+            "total_errors":   sum(t._error_count for t in self._tasks),
+            "profiler_analyzed_today": self._profiler_analyzed_today,
+            "last_analyze_date":       self._last_analyze_date,
+            "tasks":          [t.stats for t in self._tasks],
         }
 
     def force_run(self, task_name: str) -> bool:
-        """
-        Paksa jalankan satu task sekarang, di luar jadwal.
-        Berguna untuk testing atau trigger manual dari app.py.
-
-        Return True jika task ditemukan dan di-schedule.
-        """
         for task in self._tasks:
             if task.name == task_name:
                 asyncio.create_task(task.run(), name=f"otto.scheduler.force.{task_name}")
@@ -436,42 +410,34 @@ if __name__ == "__main__":
         async def flush(self): print("  [watcher] flush()")
 
     class MockProfiler:
-        def analyze(self): print("  [profiler] analyze()"); return 2
+        async def analyze(self): print("  [profiler] analyze()"); return []
 
     class MockCuriosity:
         async def try_ask(self):
             print("  [curiosity] try_ask()")
-            return "Rofi, kamu biasa sarapan jam berapa?", "hyp_test_001"
+            return "Rofi, kamu biasa aktif jam berapa?", "hyp_test_001"
 
     async def _test():
-        watcher   = MockWatcher()
-        profiler  = MockProfiler()
-        curiosity = MockCuriosity()
+        scheduler = Scheduler(MockWatcher(), MockProfiler(), MockCuriosity())
 
-        async def on_question(q, hid):
-            print(f"\n  >>> Pertanyaan ke Rofi: {q} (id: {hid})\n")
+        async def on_q(q, hid): print(f"\n  >>> Pertanyaan: {q} (id: {hid})\n")
+        scheduler.set_question_callback(on_q)
 
-        scheduler = Scheduler(watcher, profiler, curiosity)
-        scheduler.set_question_callback(on_question)
+        # Force profiler_analyzed_today = True untuk test curiosity
+        scheduler._profiler_analyzed_today = True
 
-        # Override interval supaya test cepat
         for t in scheduler._tasks:
             t.interval = 2
             t.run_at_start = True
 
-        print("\n=== START SCHEDULER ===")
+        print("=== START ===")
         await scheduler.start()
-
-        print("\n=== RUNNING 6 DETIK ===")
         await asyncio.sleep(6)
 
         print("\n=== STATS ===")
-        stats = scheduler.get_stats()
-        for t in stats["tasks"]:
+        for t in scheduler.get_stats()["tasks"]:
             print(f"  {t['name']:20} run={t['run_count']} err={t['error_count']}")
 
-        print("\n=== STOP ===")
         await scheduler.stop()
-        print("  Scheduler dihentikan.")
 
     asyncio.run(_test())

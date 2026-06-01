@@ -119,6 +119,7 @@ INTELLIGENCE = {
     "curiosity_cooldown": 3600,   # 1 jam
     # Jam aktif Rofi (Otto lebih waspada di rentang ini)
     "active_hours": (6, 23),      # 06:00–23:00
+    "curiosity_boldness": 0.5,
 }
 
 # ─── MEMORY ───────────────────────────────────────────────────────────────────

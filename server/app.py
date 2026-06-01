@@ -49,7 +49,7 @@ from intelligence.profiler import init_profiler
 from intelligence.curiosity import init_curiosity
 from intelligence.scheduler import init_scheduler
 from intelligence.growth_tracker import init_tracker, get_tracker
-from core.transcriber import Transcriber, get_transcriber 
+from core.transcriber import Transcriber, get_transcriber
 from intelligence.pending_state import pending_state
 
 logger = logging.getLogger("otto.app")
@@ -82,24 +82,21 @@ async def lifespan(app: FastAPI):
 
     logger.info("── Otto starting up ──")
 
-    # Core
     transcriber = get_transcriber()
     logger.info("✓ Transcriber siap")
- 
+
     speaker = Speaker()
     logger.info("✓ Speaker siap")
- 
-    # Intelligence layer — init dulu sebelum brain
+
     watcher   = init_watcher()
     profiler  = init_profiler(watcher)
     curiosity = init_curiosity(profiler)
     scheduler = init_scheduler(watcher, profiler, curiosity)
     tracker   = init_tracker()
- 
-    # Brain dengan profiler
-    brain = Brain(memory, profiler=profiler)   # ← UBAH
+
+    brain = Brain(memory, profiler=profiler)
     logger.info("✓ Brain siap")
- 
+
     scheduler.set_question_callback(_broadcast_curiosity_with_pending)
     await scheduler.start()
     logger.info("✓ Intelligence layer siap")
@@ -111,6 +108,8 @@ async def lifespan(app: FastAPI):
     logger.info("Otto shutting down…")
     if scheduler:
         await scheduler.stop()
+    if watcher:
+        await watcher.flush()   # ← pastikan semua log tersimpan sebelum mati
     if speaker:
         speaker.shutdown()
     if brain:
@@ -218,11 +217,10 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
         await _send_error(ws, "Format base64 audio tidak valid.")
         return
 
-    # ── STT dengan timeout global ──────────────────────────────────────
     try:
         transcript = await asyncio.wait_for(
             asyncio.to_thread(transcriber.transcribe, audio_bytes),
-            timeout=40.0  # 40 detik: ffmpeg(15) + Whisper(25) max
+            timeout=40.0
         )
     except asyncio.TimeoutError:
         logger.warning("[ws] STT timeout — paksa berhenti")
@@ -236,7 +234,6 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
         await _send_error(ws, "Gagal transkripsi audio.")
         return
 
-    # Tangani sinyal TIMEOUT dari transcriber
     if not transcript or transcript.strip() == "" or transcript == "TIMEOUT":
         if transcript == "TIMEOUT":
             await _send_json(ws, "response",
@@ -253,24 +250,32 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
 async def _handle_text(ws: WebSocket, text: str) -> None:
     if not text:
         return
- 
+
+    # ── 1. Catat ke watcher (fire and forget) ────────────────────────────────
+    # Setiap obrolan Rofi dicatat diam-diam — bahan mentah untuk profiler malam
+    if watcher:
+        asyncio.create_task(
+            watcher.log(text, intent="chat", skill=""),
+            # asyncio.create_task tidak perlu await — tidak blokir respons
+        )
+
+    # ── 2. Notify scheduler Rofi sedang aktif ────────────────────────────────
     if scheduler:
         scheduler.notify_conversation_active()
- 
-    # Cek apakah ini jawaban untuk pertanyaan curiosity
-    pending_id = pending_state.get()          # ← dari disk, survive restart
+
+    # ── 3. Cek apakah ini jawaban untuk pertanyaan curiosity ─────────────────
+    pending_id = pending_state.get()
     if pending_id:
         verdict = await curiosity.handle_response(pending_id, text)
-        pending_state.clear()                 # ← hapus dari disk
+        pending_state.clear()
         if verdict != "unclear":
             ack = "Oke, aku catat." if verdict == "confirmed" else "Oke, aku koreksi."
             await _send_json(ws, "response", ack)
             return
- 
-    # Ambil history percakapan untuk konteks
+
+    # ── 4. Ambil history & kirim ke brain ────────────────────────────────────
     history = memory.get_recent_messages(limit=20)
- 
-    # Kirim ke brain — dengan timeout
+
     try:
         resp: BrainResponse = await asyncio.wait_for(
             brain.think(text, history=history),
@@ -286,12 +291,39 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
         logger.error("[ws] Brain error: %s", e)
         await _send_error(ws, "Otto sedang ada masalah.")
         return
- 
+
     reply = resp.text
- 
+
+    # ── 5. Catat interaksi ke growth tracker ─────────────────────────────────
     if tracker:
         tracker.record_interaction(text_length=len(text))
- 
+
+    # ── 6. Inject pertanyaan curiosity di akhir reply (jika waktunya tepat) ──
+    #
+    # Filosofi: Otto tidak interupsi. Dia jawab dulu, baru selip satu pertanyaan
+    # di akhir — terasa natural, seperti teman yang ngobrol sambil penasaran.
+    # Pertanyaan hanya muncul jika:
+    #   - profiler sudah analyze malam ini (ada hipotesis segar)
+    #   - curiosity.try_ask() memutuskan waktu aman
+    #   - tidak ada pertanyaan yang sedang menggantung
+    #
+    injected_hyp_id = None
+    if curiosity and not pending_state.get():
+        try:
+            question, hyp_id = await curiosity.try_ask()
+            if question and hyp_id:
+                # Selipkan dengan pemisah natural — bukan kalimat baru yang kaku
+                reply = reply + f"\n\nOmong-omong — {question}"
+                injected_hyp_id = hyp_id
+                logger.info("[ws] Curiosity inject pertanyaan: %s", hyp_id)
+        except Exception as e:
+            logger.warning("[ws] Curiosity inject gagal (tidak kritis): %s", e)
+
+    # Simpan hyp_id ke disk supaya survive restart
+    if injected_hyp_id:
+        pending_state.set(injected_hyp_id)
+
+    # ── 7. Synthesize TTS & kirim balik ──────────────────────────────────────
     audio_b64 = ""
     try:
         audio_bytes = await asyncio.to_thread(speaker.synthesize, reply)
@@ -299,12 +331,15 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
             audio_b64 = base64.b64encode(audio_bytes).decode()
     except Exception as e:
         logger.warning("[ws] TTS gagal, kirim teks saja: %s", e)
- 
+
     await ws.send_json({
         "type":  "response",
         "data":  reply,
         "audio": audio_b64,
-        "meta":  {"intent": "curiosity"}
+        "meta":  {
+            "intent": "chat",
+            "skill":  "curiosity" if injected_hyp_id else "",
+        },
     })
 
 
@@ -319,6 +354,7 @@ async def _send_error(ws: WebSocket, msg: str) -> None:
 
 
 async def _broadcast_curiosity(question: str) -> None:
+    """Kirim pertanyaan curiosity dari scheduler (bukan dari alur normal)."""
     try:
         await asyncio.to_thread(speaker.speak_local, question)
         logger.info("[curiosity] Diputar di laptop: %s", question)
