@@ -297,16 +297,14 @@ class Brain:
 
     # ── Groq Call ─────────────────────────────────────────────────────────────
 
-    async def _call_groq(
-        self,
-        messages: list[dict],
-        retries: int = 3,
-    ) -> dict:
+    
+    async def _call_groq(self, messages, retries=3, model=None) -> dict:
         """
         Panggil Groq dengan retry + round-robin key rotation.
         Jika satu key rate-limit → otomatis coba key berikutnya.
         """
         last_exc: Exception | None = None
+        _model = model or MODEL
 
         for attempt in range(retries * len(self._keys)):
             api_key = self._next_key()
@@ -315,7 +313,7 @@ class Brain:
                 "Content-Type":  "application/json",
             }
             payload = {
-                "model":       MODEL,
+                "model": _model,
                 "messages":    messages,
                 "temperature": 0.7,
                 "max_tokens":  1024,

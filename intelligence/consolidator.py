@@ -60,7 +60,7 @@ MIN_NEW_MESSAGES = 10
 BATCH_SIZE = 20
 
 # Model ringan untuk konsolidasi (hemat token)
-CONSOLIDATION_MODEL = "llama-3.3-70b-versatile"
+CONSOLIDATION_MODEL = "llama-3.1-8b-instant"
 
 # Prompt ke LLM untuk ekstrak fakta
 _EXTRACTION_PROMPT = """\
@@ -235,8 +235,7 @@ class Consolidator:
         try:
             raw = await self._call_groq(
                 messages,
-                # Override model dan parameter untuk konsolidasi
-                # (lebih hemat, tidak perlu kreatif)
+                model=CONSOLIDATION_MODEL,
             )
             text = raw.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
             logger.debug("[consolidator] Raw LLM response: %.200s", text)
