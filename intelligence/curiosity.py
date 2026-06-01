@@ -122,7 +122,7 @@ class Curiosity:
         await curiosity.handle_response(hyp_id, "iya bener banget")
     """
 
-    def __init__(self, profiler) -> None:
+    def __init__(self, profiler, memory) -> None:
         self._profiler = profiler
         self._memory = memory
         self._last_asked_at: Optional[datetime] = None
@@ -430,9 +430,9 @@ def get_curiosity() -> Curiosity:
         raise RuntimeError("Curiosity belum diinisialisasi. Panggil init_curiosity(profiler) dulu.")
     return _curiosity_instance
 
-def init_curiosity(profiler) -> Curiosity:
+def init_curiosity(profiler, memory) -> Curiosity:
     global _curiosity_instance
-    _curiosity_instance = Curiosity(profiler)
+    _curiosity_instance = Curiosity(profiler, memory)
     return _curiosity_instance
 
 
