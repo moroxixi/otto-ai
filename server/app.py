@@ -133,7 +133,7 @@ async def lifespan(app: FastAPI):
     watcher   = init_watcher()
     profiler  = init_profiler(watcher)
     curiosity = init_curiosity(profiler)
-    scheduler = init_scheduler(watcher, profiler, curiosity)
+    scheduler = init_scheduler(watcher, profiler, curiosity, memory=memory)
     tracker   = init_tracker()
 
     brain = Brain(memory, profiler=profiler)
@@ -292,11 +292,11 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
 async def _handle_text(ws: WebSocket, text: str) -> None:
     if not text:
         return
-    # ── 2. Notify scheduler Rofi sedang aktif ────────────────────────────────
+    # ── 1. Notify scheduler Rofi sedang aktif ────────────────────────────────
     if scheduler:
         scheduler.notify_conversation_active()
 
-    # ── 3. Cek apakah ini jawaban untuk pertanyaan curiosity ─────────────────
+    # ── 2. Cek apakah ini jawaban untuk pertanyaan curiosity ─────────────────
     pending_id = pending_state.get()
     if pending_id:
         verdict = await curiosity.handle_response(pending_id, text)
@@ -311,7 +311,7 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
             await _send_json(ws, "response", ack)
             return
 
-    # ── 4. Ambil history & kirim ke brain ────────────────────────────────────
+    # ── 3. Ambil history & kirim ke brain ────────────────────────────────────
     history = memory.get_recent_messages(limit=20)
 
     try:
@@ -332,11 +332,11 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
 
     reply = resp.text
 
-    # ── 5. Catat interaksi ke growth tracker ─────────────────────────────────
+    # ── 4. Catat interaksi ke growth tracker ─────────────────────────────────
     if tracker:
         tracker.record_interaction(text_length=len(text))
 
-    # ── 6. Inject pertanyaan curiosity di akhir reply (jika waktunya tepat) ──
+    # ── 5. Inject pertanyaan curiosity di akhir reply (jika waktunya tepat) ──
     #
     # Filosofi: Otto tidak interupsi. Dia jawab dulu, baru selip satu pertanyaan
     # di akhir — terasa natural, seperti teman yang ngobrol sambil penasaran.
@@ -360,7 +360,7 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
     # Simpan hyp_id ke disk supaya survive restart
     if injected_hyp_id:
         pending_state.set(injected_hyp_id)
-    # TAMBAH INI (setelah injected_hyp_id diketahui):
+    # ── 6.
     if watcher:
         skill_tag = "curiosity" if injected_hyp_id else ""
         asyncio.create_task(

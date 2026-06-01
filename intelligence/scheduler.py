@@ -106,10 +106,11 @@ class ScheduledTask:
 # ──────────────────────────── Scheduler ──────────────────────────────────────
 
 class Scheduler:
-    def __init__(self, activity_watcher, profiler, curiosity) -> None:
+    def __init__(self, activity_watcher, profiler, curiosity, memory=None) -> None:
         self._activity_watcher = activity_watcher
         self._profiler         = profiler
         self._curiosity        = curiosity
+        self._memory           = memory  
 
         self._running          = False
         self._loop_task: Optional[asyncio.Task] = None
@@ -341,7 +342,7 @@ class Scheduler:
         try:
             tracker = get_tracker()
             summary = tracker.daily_update(
-                memory   = getattr(self, "_memory", None),
+                memory = self._memory,
                 profiler = self._profiler,
             )
             logger.info(
@@ -393,10 +394,9 @@ def get_scheduler() -> Scheduler:
         )
     return _scheduler_instance
 
-
-def init_scheduler(activity_watcher, profiler, curiosity) -> Scheduler:
+def init_scheduler(activity_watcher, profiler, curiosity, memory=None) -> Scheduler:
     global _scheduler_instance
-    _scheduler_instance = Scheduler(activity_watcher, profiler, curiosity)
+    _scheduler_instance = Scheduler(activity_watcher, profiler, curiosity, memory=memory)
     return _scheduler_instance
 
 
