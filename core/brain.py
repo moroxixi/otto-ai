@@ -27,6 +27,7 @@ from core.config import GROQ_API_KEYS, DEBUG
 from core.memory import MemoryManager
 from otto_self.model import self_summary_text
 from intelligence.conversation_scanner import ConversationScanner
+from intelligence.consolidator import init_consolidator
 
 logger = logging.getLogger("otto.brain")
 
@@ -163,6 +164,7 @@ class Brain:
         logger.info("[brain] LLM response diterima: %.60s...", text)
         asyncio.create_task(self._log_to_memory(user_text, text))
         asyncio.create_task(self._scan_conversation(user_text, text))
+        asyncio.create_task(self._consolidator.maybe_consolidate())
         return resp
 
     async def think_stream(
@@ -216,6 +218,10 @@ class Brain:
         asyncio.create_task(
             self._scan_conversation(user_text, "".join(full_text))  # ← TAMBAH
         )
+        asyncio.create_task(
+            self._consolidator.maybe_consolidate(user_text, "".join(full_text))  # ← TAMBAH
+        )
+        
 
     async def close(self) -> None:
         await self._client.aclose()
