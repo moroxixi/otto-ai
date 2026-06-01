@@ -44,8 +44,8 @@ if [ -z "$(git status --porcelain)" ]; then
 fi
 
 # ── Generate folder tree snapshot sebelum commit ──────────────────────────
-if [ -f "$OTTO_DIR/generate_tree.sh" ]; then
-    bash "$OTTO_DIR/generate_tree.sh" >> "$LOG" 2>&1
+if [ -f "$OTTO_DIR/scripts/generate_tree.sh" ]; then
+    bash "$OTTO_DIR/scripts/generate_tree.sh" >> "$LOG" 2>&1
     echo "$(date '+%H:%M') [Tree] Snapshot diperbarui." >> "$LOG"
 else
     echo "$(date '+%H:%M') [Tree] generate_tree.sh tidak ditemukan, skip." >> "$LOG"
