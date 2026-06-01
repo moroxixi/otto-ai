@@ -267,6 +267,7 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
     try:
         audio_bytes = base64.b64decode(b64)
         logger.info("[ws] Audio diterima: %d bytes", len(audio_bytes))
+        logger.info("[ws] Audio header bytes: %s", audio_bytes[:12].hex())
     except Exception:
         await _send_error(ws, "Format base64 audio tidak valid.")
         return

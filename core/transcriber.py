@@ -139,33 +139,38 @@ class Transcriber:
                 tmp_path.write_bytes(wav_audio)
 
             else:
-                # Format lain (webm/opus dari iPhone) — konversi via ffmpeg
-                webm_tmp = tmp_path.with_suffix(".webm")
-                webm_tmp.write_bytes(audio)
+                # Pipe langsung ke stdin — tidak perlu tulis file webm dulu
+                # Coba tanpa -f (auto-detect) karena iPhone kadang kirim format campuran
                 try:
                     result = subprocess.run([
                         "ffmpeg", "-y",
-                        "-f", "webm",       # eksplisit format input → ffmpeg tidak perlu tebak
-                        "-i", str(webm_tmp),
-                        "-ar", "16000",
-                        "-ac", "1",
+                        "-i", "pipe:0",             # baca dari stdin
+                        "-ar", "16000", "-ac", "1",
                         "-f", "wav",
                         str(tmp_path)
-                    ], capture_output=True, timeout=30)  # naik dari 15 → 30 detik
+                    ], input=audio, capture_output=True, timeout=30)
 
                     if result.returncode != 0:
-                        err = result.stderr.decode(errors="replace")
-                        print(f"[transcriber] ffmpeg error: {err}")
-                        return ""
+                        # Fallback: coba paksa format ogg (iPhone kadang kirim ogg/opus)
+                        print(f"[transcriber] ffmpeg auto-detect gagal, coba ogg...")
+                        result = subprocess.run([
+                            "ffmpeg", "-y",
+                            "-f", "ogg", "-i", "pipe:0",
+                            "-ar", "16000", "-ac", "1",
+                            "-f", "wav",
+                            str(tmp_path)
+                        ], input=audio, capture_output=True, timeout=30)
+
+                        if result.returncode != 0:
+                            err = result.stderr.decode(errors="replace")
+                            print(f"[transcriber] ffmpeg gagal semua format: {err[:200]}")
+                            return ""
 
                 except subprocess.TimeoutExpired:
                     print("[transcriber] ffmpeg timeout — audio tidak bisa dikonversi")
                     return "TIMEOUT"
 
-                finally:
-                    webm_tmp.unlink(missing_ok=True)
-
-            # ── Jalankan Whisper ─────────────────────────────────────────────
+    # ── Jalankan Whisper ─────────────────────────────────────────────
             if mode == "command":
                 model, label = self._models["medium"], "medium"
             elif mode == "chat":
@@ -180,7 +185,7 @@ class Transcriber:
                 language=WHISPER["language"],
                 beam_size=5,
                 initial_prompt=WHISPER_INITIAL_PROMPT,
-                vad_filter=True,
+                vad_filter=False,
                 vad_parameters={
                     "min_silence_duration_ms": 300,   # turun dari 500 → lebih toleran
                     "speech_pad_ms": 400,             # tambah padding sebelum/sesudah suara
