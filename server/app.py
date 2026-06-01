@@ -132,7 +132,7 @@ async def lifespan(app: FastAPI):
 
     watcher   = init_watcher()
     profiler  = init_profiler(watcher)
-    curiosity = init_curiosity(profiler)
+    curiosity = init_curiosity(profiler, memory)
     scheduler = init_scheduler(watcher, profiler, curiosity, memory=memory)
     tracker   = init_tracker()
 

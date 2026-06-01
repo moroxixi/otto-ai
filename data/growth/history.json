@@ -1,0 +1,93 @@
+[
+  {
+    "week_number": 1,
+    "year": 2026,
+    "start_date": "2026-05-31",
+    "end_date": "2026-05-31",
+    "locked": true,
+    "score_knowledge": 0,
+    "score_capability": 0,
+    "score_depth": 61,
+    "score_total": 61,
+    "cumulative_total": 61,
+    "interactions": 5,
+    "active_days": 0,
+    "hypotheses_made": 0,
+    "facts_confirmed": 0,
+    "skills_used": [],
+    "deep_conversations": 4,
+    "errors": 0,
+    "code_updates": 0,
+    "otto_note": "Minggu ke-1: Lumayan aktif. 0 hari bersama Rofi. 4 percakapan yang cukup dalam.",
+    "events": [
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-05-31T01:27:13"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-05-31T01:29:28"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-05-31T01:30:49"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-05-31T01:32:15"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-05-31T01:34:57"
+      }
+    ]
+  },
+  {
+    "week_number": 22,
+    "year": 2026,
+    "start_date": "2026-05-31",
+    "end_date": "2026-06-01",
+    "locked": true,
+    "score_knowledge": 0,
+    "score_capability": 0,
+    "score_depth": 46,
+    "score_total": 46,
+    "cumulative_total": 107,
+    "interactions": 4,
+    "active_days": 0,
+    "hypotheses_made": 0,
+    "facts_confirmed": 0,
+    "skills_used": [],
+    "deep_conversations": 3,
+    "errors": 0,
+    "code_updates": 0,
+    "otto_note": "Minggu ke-22: Lumayan aktif. 0 hari bersama Rofi. 3 percakapan yang cukup dalam.",
+    "events": [
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-05-31T14:59:44"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-05-31T15:03:40"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-05-31T15:12:57"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-05-31T17:04:46"
+      }
+    ]
+  }
+]

@@ -53,7 +53,6 @@ MIN_INTERACTIONS = 5
 
 # Seberapa kuat sinyal sebelum dianggap pola
 KEYWORD_THRESHOLD = 3    # kata harus muncul ≥3x
-SKILL_THRESHOLD   = 2    # skill harus dipanggil ≥2x
 HOUR_THRESHOLD    = 3    # jam harus aktif ≥3x
 
 # Hipotesis "stale" setelah berapa hari tidak diverifikasi
@@ -139,7 +138,6 @@ class Profiler:
 
         new_hypotheses += self._analyze_schedule(summary)
         new_hypotheses += self._analyze_topics(summary)
-        new_hypotheses += self._analyze_skills(summary)
         new_hypotheses += self._analyze_activity_level(summary)
 
         # Tandai hipotesis lama yang sudah stale
@@ -278,35 +276,7 @@ class Profiler:
 
         return results
 
-    # ── Analyzer: Skill Usage ─────────────────────────────────────────────────
-
-    def _analyze_skills(self, summary: dict) -> list[Hypothesis]:
-        """Buat hipotesis dari skill yang sering dipanggil."""
-        results    = []
-        top_skills = dict(summary.get("top_skills", []))
-
-        SKILL_HINTS = {
-            "reminder":     "Rofi orang yang terjadwal dan sering mengatur pengingat",
-            "play_santai":  "Rofi suka mendengarkan musik santai",
-            "play_jadul":   "Rofi suka lagu-lagu jadul",
-            "track_weight": "Rofi aktif memantau berat badannya",
-            "track_custom": "Rofi rajin memantau kondisi kesehatannya",
-            "volume_up":    "Rofi sering menaikkan volume — kemungkinan suka suasana ramai",
-        }
-
-        for skill, hint in SKILL_HINTS.items():
-            count = top_skills.get(skill, 0)
-            if count >= SKILL_THRESHOLD:
-                conf = min(0.5 + (count * 0.05), 0.85)
-                results.append(Hypothesis(
-                    category   = "habit",
-                    claim      = hint,
-                    evidence   = f"skill '{skill}' dipanggil {count}x",
-                    confidence = round(conf, 2),
-                ))
-
-        return results
-
+    
     # ── Analyzer: Tingkat Aktivitas ───────────────────────────────────────────
 
     def _analyze_activity_level(self, summary: dict) -> list[Hypothesis]:

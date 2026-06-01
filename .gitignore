@@ -1,30 +1,50 @@
-# Environment
+# ─── Environment ──────────────────────────────────────────────────────────────
 .env
 
-# Data runtime (jangan di-commit)
-data/
+# ─── Data runtime (tidak di-commit — berisi info pribadi Rofi) ────────────────
+data/memory.json
+data/profile.json
+data/hypotheses.json
+data/activity.log
+data/activity_summary.json
+data/consolidation_state.json
+data/curiosity_state.json
+data/curiosity_pending.json
+data/shortcuts.json
+data/crash.log
+data/growth/daily_log.jsonl
+data/growth/current_week.json
+
+# Yang boleh di-commit (riwayat pertumbuhan Otto — snapshot mingguan yang terkunci)
+# data/growth/history.json → TIDAK di-ignore, sengaja disimpan di repo
+
+# ─── SSL ──────────────────────────────────────────────────────────────────────
 ssl/
 
-
-venv/
-.env
-data/*.json
-ssl/
-memory/.store/
-
-# Audio & model besar
+# ─── Audio & model besar ──────────────────────────────────────────────────────
 voices/
 *.wav
 *.mp3
 *.onnx
+*.bin
 
-# Python
+# ─── Self state (personality Otto — di-commit supaya survive reinstall) ───────
+# otto_self/ → TIDAK di-ignore, sengaja disimpan
+# Tapi exclude state yang berubah otomatis:
+otto_self/.last_commit_hash
+
+# ─── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 *.egg-info/
 .venv/
-
-# Output Claude
-otto_for_claude.txt
 venv/
+
+# ─── Output generate_tree ─────────────────────────────────────────────────────
+otto_for_claude.txt
+
+# ─── Log & temp ───────────────────────────────────────────────────────────────
+otto.log
+*.tmp

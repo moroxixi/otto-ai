@@ -124,6 +124,7 @@ class Curiosity:
 
     def __init__(self, profiler) -> None:
         self._profiler = profiler
+        self._memory = memory
         self._last_asked_at: Optional[datetime] = None
         self._pending_hypothesis_id: Optional[str] = None
         self._load_state()
@@ -179,6 +180,10 @@ class Curiosity:
        if verdict == "confirmed":
            self._profiler.confirm(hypothesis_id)
            logger.info("[curiosity] Hipotesis %s → CONFIRMED", hypothesis_id)
+           h = self._profiler._find(hypothesis_id)
+           if h:
+               key = f"rofi.confirmed.{h.category}.{h.id[:6]}"
+               self._memory.remember(key, h.claim, source="konfirmasi_rofi")
        elif verdict == "rejected":
            self._profiler.reject(hypothesis_id)
            logger.info("[curiosity] Hipotesis %s → REJECTED", hypothesis_id)
