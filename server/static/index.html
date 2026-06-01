@@ -738,6 +738,44 @@ async function initMic() {
 //  Rekam → kirim ke Otto
 //  Mode: record WebM → blob → base64 → WS JSON
 // ══════════════════════════════════════════════════════
+
+async function blobToWav(blob) {
+  await ensureAudioCtx();
+  const arrayBuf = await blob.arrayBuffer();
+  const decoded  = await audioCtx.decodeAudioData(arrayBuf);
+  
+  // Ambil raw PCM dari channel pertama
+  const pcm      = decoded.getChannelData(0);
+  const rate     = decoded.sampleRate;
+  
+  // Buat WAV header + data
+  const numSamples = pcm.length;
+  const buf        = new ArrayBuffer(44 + numSamples * 2);
+  const view       = new DataView(buf);
+  
+  // WAV header
+  const w = (o, s) => { for (let i=0; i<s.length; i++) view.setUint8(o+i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); view.setUint32(4, 36 + numSamples*2, true);
+  w(8, 'WAVE'); w(12, 'fmt ');
+  view.setUint32(16, 16, true);   // chunk size
+  view.setUint16(20, 1, true);    // PCM
+  view.setUint16(22, 1, true);    // mono
+  view.setUint32(24, rate, true);
+  view.setUint32(28, rate*2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  w(36, 'data'); view.setUint32(40, numSamples*2, true);
+  
+  // PCM data (float32 → int16)
+  for (let i=0; i<numSamples; i++) {
+    view.setInt16(44 + i*2, Math.max(-1, Math.min(1, pcm[i])) * 0x7FFF, true);
+  }
+  
+  return new Blob([buf], { type: 'audio/wav' });
+}
+
+
+
 async function startRec() {
   if (!isMicGranted || btn.classList.contains('speaking') || btn.classList.contains('busy')) return;
   if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -752,11 +790,12 @@ async function startRec() {
   chunks = [];
 
   try {
-    mediaRecorder = new MediaRecorder(micStream, { mimeType: 'audio/webm;codecs=opus' });
-    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    // SESUDAH — konversi ke WAV dulu di browser sebelum kirim
+    mediaRecorder = new MediaRecorder(micStream);
     mediaRecorder.onstop = async () => {
-      const blob   = new Blob(chunks, { type: 'audio/webm' });
-      const b64    = await blobToBase64(blob);
+      const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
+      const wav  = await blobToWav(blob);   // konversi di browser
+      const b64  = await blobToBase64(wav);
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'audio', data: b64 }));
         btn.classList.add('busy');
