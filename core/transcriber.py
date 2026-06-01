@@ -181,7 +181,11 @@ class Transcriber:
                 beam_size=5,
                 initial_prompt=WHISPER_INITIAL_PROMPT,
                 vad_filter=True,
-                vad_parameters={"min_silence_duration_ms": 500},
+                vad_parameters={
+                    "min_silence_duration_ms": 300,   # turun dari 500 → lebih toleran
+                    "speech_pad_ms": 400,             # tambah padding sebelum/sesudah suara
+                    "threshold": 0.3,                 # turun dari default 0.5 → lebih sensitif
+                },
             )
             semua_segment = list(segments)
             teks = " ".join(seg.text.strip() for seg in semua_segment).strip()
