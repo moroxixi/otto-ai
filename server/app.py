@@ -148,14 +148,26 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("Otto shutting down…")
+
+    # 1. Hentikan komponen Otto dulu
     if scheduler:
         await scheduler.stop()
     if watcher:
-        await watcher.flush()   # ← pastikan semua log tersimpan sebelum mati
+        await watcher.flush()
     if speaker:
         speaker.shutdown()
     if brain:
         await brain.close()
+
+    # 2. Cancel semua asyncio task yang masih jalan
+    #    Ini mencegah uvloop crash saat loop ditutup paksa
+    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    if tasks:
+        logger.info("Membersihkan %d task yang masih jalan...", len(tasks))
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        logger.info("Semua task selesai dibersihkan.")
 
 
 # ─────────────────────────── App ─────────────────────────────────────────────
@@ -443,4 +455,5 @@ if __name__ == "__main__":
         log_level = "debug" if DEBUG else "info",
         ssl_keyfile  = ssl_keyfile  if use_ssl else None,
         ssl_certfile = ssl_certfile if use_ssl else None,
+        loop        = "uvloop",
     )

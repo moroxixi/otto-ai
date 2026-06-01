@@ -115,7 +115,7 @@ scan_folder "CORE"         "core"
 scan_folder "SERVER"       "server"
 scan_folder "SKILLS"       "skills"
 scan_folder "INTELLIGENCE" "intelligence"
-scan_folder "SELF"         "self"
+scan_folder "SELF"         "otto_self"
 scan_folder "DATA"         "data"
 # ─── Tree folder ──────────────────────────────────────────────────────────────
 cat >> "$OUTPUT" << 'TREE_HEADER'

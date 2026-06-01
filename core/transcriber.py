@@ -27,11 +27,10 @@ class Transcriber:
         self._models: dict[str, WhisperModel] = {}
         print("[transcriber] Loading Whisper medium...")
         self._models["medium"] = WhisperModel(
-            "medium", device="cpu", compute_type="int8", num_workers=2, cpu_threads=4, local_files_only=True 
+            "medium", device="cpu", compute_type="int8", num_workers=2, cpu_threads=4, local_files_only=True
         )
         print("[transcriber] Whisper medium siap.")
 
-        
 
     # ─── INTERNAL HELPERS ─────────────────────────────────────────────────────
 
@@ -49,14 +48,14 @@ class Transcriber:
             return 99.0  # fallback → medium
 
     def _pilih_model(self, durasi: float) -> tuple[WhisperModel, str]:
-    # tiny sudah dihapus — selalu pakai medium
+        # tiny sudah dihapus — selalu pakai medium
         return self._models["medium"], "medium"
 
     def _normalize_nama(self, teks: str) -> str:
         """
         Ganti variasi nama salah tangkap Whisper → nama yang benar.
         Hanya di awal kalimat atau setelah tanda baca, bukan di tengah kalimat.
-        
+
         Contoh: "auto putar lagu" → "Otto putar lagu"
                 "aku suka oto" → tidak diubah (di tengah kalimat)
         """
@@ -122,45 +121,57 @@ class Transcriber:
         if not audio:
             return ""
 
-        if audio[:4] != b"RIFF":
-            wav_audio = self.pcm_to_wav(audio)
-        else:
-            wav_audio = audio
+        # Buat path dulu tanpa 'with' — supaya file tidak auto-delete
+        # sebelum Whisper selesai membacanya
+        tmp_path = Path(tempfile.mktemp(suffix=".wav"))
 
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-            tmp_path = Path(tmp.name)
+        try:
+            # ── Deteksi & konversi format (satu titik, tidak dua kali) ──────
+            is_wav = audio[:4] == b"RIFF"
 
-            if audio[:4] not in (b"RIFF", b"\x00\x00\x00\x00"):
+            if is_wav:
+                # Sudah WAV — langsung tulis
+                tmp_path.write_bytes(audio)
+
+            elif audio[:4] == b"\x00\x00\x00\x00" or (not is_wav and len(audio) % 2 == 0):
+                # Kemungkinan raw PCM dari pw-record — bungkus jadi WAV
+                wav_audio = self.pcm_to_wav(audio)
+                tmp_path.write_bytes(wav_audio)
+
+            else:
+                # Format lain (webm/opus dari iPhone) — konversi via ffmpeg
                 webm_tmp = tmp_path.with_suffix(".webm")
                 webm_tmp.write_bytes(audio)
                 try:
                     result = subprocess.run([
-                        "ffmpeg", "-y", "-i", str(webm_tmp),
-                        "-ar", "16000", "-ac", "1", "-f", "wav", str(tmp_path)
-                    ], capture_output=True, timeout=15)
-                
+                        "ffmpeg", "-y",
+                        "-f", "webm",       # eksplisit format input → ffmpeg tidak perlu tebak
+                        "-i", str(webm_tmp),
+                        "-ar", "16000",
+                        "-ac", "1",
+                        "-f", "wav",
+                        str(tmp_path)
+                    ], capture_output=True, timeout=30)  # naik dari 15 → 30 detik
+
                     if result.returncode != 0:
-                        print(f"[transcriber] ffmpeg error: {result.stderr.decode()}")
+                        err = result.stderr.decode(errors="replace")
+                        print(f"[transcriber] ffmpeg error: {err}")
                         return ""
-                
+
                 except subprocess.TimeoutExpired:
                     print("[transcriber] ffmpeg timeout — audio tidak bisa dikonversi")
-                    tmp_path.unlink(missing_ok=True)
                     return "TIMEOUT"
-                
-                finally:
-                    webm_tmp.unlink(missing_ok=True)  # ← ini sudah aman karena webm_tmp pasti ada
-                wav_audio = tmp_path.read_bytes()
-            else:
-                tmp_path.write_bytes(wav_audio)
 
-        try:
+                finally:
+                    webm_tmp.unlink(missing_ok=True)
+
+            # ── Jalankan Whisper ─────────────────────────────────────────────
             if mode == "command":
                 model, label = self._models["medium"], "medium"
             elif mode == "chat":
                 model, label = self._models["medium"], "medium"
             else:
-                durasi = self._durasi_wav(wav_audio)
+                durasi = self._durasi_wav(tmp_path.read_bytes())
                 model, label = self._pilih_model(durasi)
                 print(f"[transcriber] Durasi {durasi:.1f}s → model [{label}]")
 
@@ -181,7 +192,9 @@ class Transcriber:
         except Exception as e:
             print(f"[transcriber] Error: {e}")
             return ""
+
         finally:
+            # Selalu bersihkan tmp file, apapun yang terjadi
             tmp_path.unlink(missing_ok=True)
 
     # ─── SHORTCUT ─────────────────────────────────────────────────────────────
@@ -204,7 +217,9 @@ class Transcriber:
         pcm = self.record(duration=duration)
         return self.transcribe(pcm, mode=mode)
 
+
 _instance: Transcriber | None = None
+
 def get_transcriber() -> Transcriber:
     global _instance
     if _instance is None:
