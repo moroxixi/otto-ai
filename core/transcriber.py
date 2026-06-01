@@ -175,8 +175,12 @@ class Transcriber:
                 language=WHISPER["language"],
                 beam_size=5,
                 initial_prompt=WHISPER_INITIAL_PROMPT,
-                vad_filter=False,
-                vad_parameters={"min_silence_duration_ms": 500},
+                vad_filter=True,
+                vad_parameters={
+                    "threshold": 0.25,              # sensitif tapi tidak over-agresif
+                    "min_silence_duration_ms": 200, # jeda pendek tidak dianggap akhir bicara  
+                    "speech_pad_ms": 300,           # padding 300ms sebelum/sesudah suara
+                },
             )
             semua_segment = list(segments)
             teks = " ".join(seg.text.strip() for seg in semua_segment).strip()

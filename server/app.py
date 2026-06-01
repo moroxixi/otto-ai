@@ -456,5 +456,4 @@ if __name__ == "__main__":
         log_level = "debug" if DEBUG else "info",
         ssl_keyfile  = ssl_keyfile  if use_ssl else None,
         ssl_certfile = ssl_certfile if use_ssl else None,
-        loop        = "uvloop",
     )
