@@ -25,7 +25,7 @@ import httpx
 
 from core.config import GROQ_API_KEYS, DEBUG
 from core.memory import MemoryManager
-from otto_self.model import self_summary_text
+from otto_self.model import self_summary_text, load_personality, after_interaction, save_personality
 from intelligence.conversation_scanner import ConversationScanner
 from intelligence.consolidator import init_consolidator
 
@@ -108,6 +108,19 @@ class Brain:
 
 
 
+    async def _evolve_personality(self, interaction_type: str = "normal") -> None:
+        """Panggil after_interaction() dan simpan ke disk. Non-blocking."""
+        try:
+            personality = await asyncio.to_thread(load_personality)
+            updated = after_interaction(personality, interaction_type)
+            await asyncio.to_thread(save_personality, updated)
+            logger.debug("[brain] Personality updated → layer=%d count=%d",
+                         updated["active_layer"], updated["interaction_count"])
+        except Exception as e:
+            logger.warning("[brain] Gagal evolve personality: %s", e)
+
+
+
     async def _scan_conversation(self, user_text: str, otto_text: str) -> None:
         '''
         Jalankan ConversationScanner secara non-blocking.
@@ -166,6 +179,7 @@ class Brain:
         asyncio.create_task(self._log_to_memory(user_text, text))
         asyncio.create_task(self._scan_conversation(user_text, text))
         asyncio.create_task(self._consolidator.maybe_consolidate())
+        asyncio.create_task(self._evolve_personality("normal"))
         return resp
 
     async def think_stream(
@@ -221,6 +235,9 @@ class Brain:
         )
         asyncio.create_task(
             self._consolidator.maybe_consolidate()  # ← TAMBAH
+        )
+        asyncio.create_task(
+                self._evolve_personality("normal")
         )
         
 
