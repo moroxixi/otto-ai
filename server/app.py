@@ -30,6 +30,8 @@ import logging
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+import signal
+import subprocess
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -67,6 +69,34 @@ transcriber: Transcriber | None = None
 active_ws: WebSocket | None = None
 
 
+
+CRASH_LOG = PATHS["base"] / "data" / "crash.log"
+ 
+def _write_crash_log(reason: str) -> None:
+    """Tulis detail crash ke file sebelum mati."""
+    try:
+        CRASH_LOG.parent.mkdir(parents=True, exist_ok=True)
+        timestamp = __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(CRASH_LOG, "a") as f:
+            f.write(f"[{timestamp}] {reason}\n")
+    except Exception:
+        pass  # jangan raise lagi saat crash handler
+ 
+ 
+def _setup_signal_handlers() -> None:
+    """
+    Tangkap SIGTERM (dari systemd saat restart) dan SIGINT (Ctrl+C).
+    Pastikan shutdown berjalan bersih.
+    """
+    def _handle_sigterm(signum, frame):
+        logger.info("SIGTERM diterima — Otto shutdown bersih.")
+        # FastAPI/uvicorn akan handle sisanya via lifespan shutdown
+        raise SystemExit(0)
+ 
+    signal.signal(signal.SIGTERM, _handle_sigterm)
+ 
+
+
 # ─────────────────────────── Startup / Shutdown ──────────────────────────────
 
 @asynccontextmanager
@@ -79,6 +109,18 @@ async def lifespan(app: FastAPI):
         format  = "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         datefmt = "%H:%M:%S",
     )
+    def _handle_exception(loop, context):
+        exc = context.get("exception")
+        msg = context.get("message", "Unknown async error")
+        logger.critical("[FATAL] Unhandled async exception: %s | %s", msg, exc)
+        _write_crash_log(f"Unhandled async exception: {msg} — {exc}")
+        # Biarkan Otto tetap jalan — hanya log, tidak kill process
+        # Kalau ingin kill: loop.stop()
+
+    loop = asyncio.get_event_loop()
+    loop.set_exception_handler(_handle_exception)
+    _setup_signal_handlers()
+ 
 
     logger.info("── Otto starting up ──")
 

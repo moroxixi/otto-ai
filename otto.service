@@ -1,0 +1,36 @@
+[Unit]
+Description=Otto AI — Asisten Proaktif Rofi
+After=network.target sound.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=rofi
+WorkingDirectory=/data/asd/otto-ai
+
+# Aktifkan virtualenv lalu jalankan Otto
+ExecStart=/data/asd/otto-ai/venv/bin/python -m server.app
+
+# Script notif dipanggil SETIAP kali Otto berhenti (crash atau manual)
+# EXIT_CODE dikirim otomatis oleh systemd sebagai env var
+ExecStopPost=/data/asd/otto-ai/scripts/otto-crash-notify.sh
+
+# Auto-restart kalau crash (bukan kalau distop manual via systemctl stop)
+Restart=on-failure
+RestartSec=5s
+
+# Batas restart — kalau 5x crash dalam 2 menit, systemd angkat tangan
+StartLimitInterval=120s
+StartLimitBurst=5
+
+# Log output ke journal (bisa dilihat: journalctl -u otto -f)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=otto
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/data/asd/otto-ai/.env
+
+[Install]
+WantedBy=multi-user.target
