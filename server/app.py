@@ -292,15 +292,6 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
 async def _handle_text(ws: WebSocket, text: str) -> None:
     if not text:
         return
-
-    # ── 1. Catat ke watcher (fire and forget) ────────────────────────────────
-    # Setiap obrolan Rofi dicatat diam-diam — bahan mentah untuk profiler malam
-    if watcher:
-        asyncio.create_task(
-            watcher.log(text, intent="chat", skill=""),
-            # asyncio.create_task tidak perlu await — tidak blokir respons
-        )
-
     # ── 2. Notify scheduler Rofi sedang aktif ────────────────────────────────
     if scheduler:
         scheduler.notify_conversation_active()
@@ -311,6 +302,11 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
         verdict = await curiosity.handle_response(pending_id, text)
         pending_state.clear()
         if verdict != "unclear":
+            # Log dengan intent yang benar — ini bukan chat biasa
+            if watcher:
+                asyncio.create_task(
+                    watcher.log(text, intent="curiosity_response", skill="curiosity")
+                )
             ack = "Oke, aku catat." if verdict == "confirmed" else "Oke, aku koreksi."
             await _send_json(ws, "response", ack)
             return
@@ -364,6 +360,12 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
     # Simpan hyp_id ke disk supaya survive restart
     if injected_hyp_id:
         pending_state.set(injected_hyp_id)
+    # TAMBAH INI (setelah injected_hyp_id diketahui):
+    if watcher:
+        skill_tag = "curiosity" if injected_hyp_id else ""
+        asyncio.create_task(
+            watcher.log(text, intent="chat", skill=skill_tag)
+        )
 
     # ── 7. Synthesize TTS & kirim balik ──────────────────────────────────────
     audio_b64 = ""
