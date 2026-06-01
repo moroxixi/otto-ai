@@ -122,7 +122,6 @@
         0 0 80px rgba(192,132,252,0.15);
       flex-shrink: 0;
     }
-    /* subtle version tag */
     h1::after {
       content: ' AI-v2';
       font-size: 0.42rem;
@@ -148,7 +147,6 @@
       outline: none;
       overflow: hidden;
     }
-    /* blob canvas inside button */
     #blob-canvas {
       position: absolute; inset: 0;
       border-radius: 50%;
@@ -159,7 +157,6 @@
     #btn-push.recording #blob-canvas,
     #btn-push.speaking  #blob-canvas { opacity: 1; }
 
-    /* outer ring */
     #btn-push::before {
       content: '';
       position: absolute; inset: -8px;
@@ -167,7 +164,6 @@
       border: 1px solid transparent;
       transition: border-color 0.3s, box-shadow 0.3s;
     }
-    /* inner ring */
     #btn-push::after {
       content: '';
       position: absolute; inset: 10px;
@@ -185,7 +181,6 @@
       transition: color 0.25s;
     }
 
-    /* READY state */
     #btn-push.ready {
       border-color: rgba(192,132,252,0.25);
       box-shadow: 0 0 28px rgba(192,132,252,0.08);
@@ -194,7 +189,6 @@
     #btn-push.ready::before { border-color: rgba(192,132,252,0.1); }
     #btn-push.ready .b-label { color: rgba(192,132,252,0.55); }
 
-    /* RECORDING state */
     #btn-push.recording {
       border-color: rgba(251,146,60,0.7);
       box-shadow: 0 0 36px rgba(251,146,60,0.35);
@@ -204,7 +198,6 @@
     #btn-push.recording .b-label { color: var(--accent2); }
     #btn-push.recording .b-emoji { animation: rec-pulse 0.9s ease-in-out infinite; }
 
-    /* SPEAKING state */
     #btn-push.speaking {
       border-color: rgba(192,132,252,0.5);
       box-shadow: 0 0 48px rgba(192,132,252,0.25);
@@ -214,7 +207,6 @@
     #btn-push.speaking .b-label { color: var(--accent); letter-spacing: 3px; }
     #btn-push.speaking .b-emoji { animation: speak-bob 1.6s ease-in-out infinite; }
 
-    /* DISABLED */
     #btn-push.busy { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
 
     @keyframes rec-pulse   { 0%,100%{transform:scale(1)}    50%{transform:scale(0.85)} }
@@ -225,7 +217,6 @@
     }
     @keyframes blink-dot   { 50% { opacity: 0; } }
 
-    /* ── Emoji swap ── */
     .b-emoji.out { opacity: 0; transform: scale(0.4) translateY(10px); transition: opacity 0.1s, transform 0.1s; }
     .b-emoji.in  { opacity: 1; transform: scale(1)   translateY(0);    transition: opacity 0.18s 0.08s, transform 0.18s 0.08s; }
 
@@ -313,7 +304,6 @@
     }
     #intent-badge.show { opacity: 1; }
 
-    /* ── Corner decoration top-right ── */
     .deco-corner {
       position: fixed; top: -60px; right: -60px;
       width: 220px; height: 220px;
@@ -355,26 +345,31 @@
 <div id="resp-wrap"><div id="resp-text">...</div></div>
 
 <div id="intent-badge"></div>
-<script>
 
+<script>
 // ══════════════════════════════════════════════════════
-//  OTTO Interface Script — Revisi bersih
-//  Fix utama: konversi audio via Web Audio API (iOS safe)
+//  OTTO Interface Script — PCM Streaming Edition
+//
 //  WS Protocol:
 //    TX → { type: "audio", data: "<base64 WAV>" }
 //         { type: "text",  data: "teks" }
 //         { type: "ping" }
-//    RX ← { type: "transcript", data: "..." }
-//         { type: "response", data: "...", audio: "<base64 WAV>", meta: {} }
-//         { type: "error", data: "..." }
+//    RX ← { type: "transcript",        data: "..." }
+//         { type: "text_response",     text: "..." }   ← teks respons
+//         { type: "audio_stream_start" }               ← mulai kumpul PCM
+//         { type: "audio_stream_end"   }               ← putar semua PCM
+//         [binary ArrayBuffer]                         ← chunk PCM Int16
+//         { type: "status",            data: "..." }
+//         { type: "error",             data: "..." }
 //         { type: "pong" }
+//         { type: "intent",  intent: "...", skill: "..." }
 // ══════════════════════════════════════════════════════
 
 const WS_RETRY_DELAY = 5000;
 const WS_MAX_RETRY   = 8;
 const SAMPLE_RATE    = 22050;
 
-// ── DOM refs ─────────────────────────────────────────
+// ── DOM refs ──────────────────────────────────────────
 const btn          = document.getElementById('btn-push');
 const bEmoji       = document.getElementById('b-emoji');
 const bLabel       = document.getElementById('b-label');
@@ -405,6 +400,11 @@ let animId        = null;
 let emojiRafId    = null;
 let typingRafId   = null;
 let intentTimer   = null;
+
+// PCM streaming state
+let pcmChunks     = [];
+let isCollecting  = false;
+let pendingText   = '';
 
 let typingText    = '';
 let typingStart   = 0;
@@ -481,7 +481,7 @@ function setEmoji(e, l) {
   }, 110);
 }
 
-// ── Emoji loop ────────────────────────────────────────
+// ── Emoji loop (sinkron dengan audio) ─────────────────
 function startEmojiLoop(text, dur) {
   stopEmojiLoop();
   if (!text) return;
@@ -545,28 +545,19 @@ async function ensureAudioCtx() {
 }
 
 // ══════════════════════════════════════════════════════
-//  KONVERSI AUDIO → WAV (iOS/Android safe)
-//
-//  Masalah lama: browser kirim WebM → server gagal proses
-//  Solusi: decode di browser via Web Audio API → encode WAV manual
-//  Tidak perlu library external, jalan di semua browser
+//  KONVERSI AUDIO → WAV (untuk upload ke server)
+//  (tetap dipertahankan untuk kompatibilitas kirim audio)
 // ══════════════════════════════════════════════════════
 async function convertToWav(blob) {
   await ensureAudioCtx();
-
-  // Step 1: Blob → ArrayBuffer
   const arrayBuf = await blob.arrayBuffer();
-
-  // Step 2: Decode audio (browser handle semua format: WebM, MP4, dll)
   let decoded;
   try {
     decoded = await audioCtx.decodeAudioData(arrayBuf);
   } catch (err) {
-    console.error('[audio] decodeAudioData gagal:', err);
     throw new Error('Gagal decode audio: ' + err.message);
   }
 
-  // Step 3: Ambil PCM mono (downmix jika stereo)
   const numCh      = decoded.numberOfChannels;
   const numSamples = decoded.length;
   const pcm        = new Float32Array(numSamples);
@@ -574,7 +565,6 @@ async function convertToWav(blob) {
   if (numCh === 1) {
     decoded.copyFromChannel(pcm, 0);
   } else {
-    // Downmix: rata-rata semua channel
     const tmp = new Float32Array(numSamples);
     for (let ch = 0; ch < numCh; ch++) {
       decoded.copyFromChannel(tmp, ch);
@@ -583,7 +573,6 @@ async function convertToWav(blob) {
     for (let i = 0; i < numSamples; i++) pcm[i] /= numCh;
   }
 
-  // Step 4: Resample ke 16kHz (Whisper optimal)
   const targetRate   = 16000;
   const sourceRate   = decoded.sampleRate;
   const ratio        = sourceRate / targetRate;
@@ -592,48 +581,239 @@ async function convertToWav(blob) {
 
   for (let i = 0; i < outSamples; i++) {
     const srcIdx = Math.min(Math.floor(i * ratio), numSamples - 1);
-    // Clamp float32 → int16
     resampled[i] = Math.max(-32768, Math.min(32767, Math.round(pcm[srcIdx] * 32767)));
   }
 
-  // Step 5: Buat WAV header + data
   const wavBuf  = new ArrayBuffer(44 + resampled.byteLength);
   const view    = new DataView(wavBuf);
   const write   = (off, str) => { for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i)); };
 
   write(0,  'RIFF');
-  view.setUint32(4,  36 + resampled.byteLength, true); // file size - 8
+  view.setUint32(4,  36 + resampled.byteLength, true);
   write(8,  'WAVE');
   write(12, 'fmt ');
-  view.setUint32(16, 16,          true);  // PCM chunk size
-  view.setUint16(20, 1,           true);  // format: PCM
-  view.setUint16(22, 1,           true);  // channels: mono
-  view.setUint32(24, targetRate,  true);  // sample rate: 16000
-  view.setUint32(28, targetRate * 2, true); // byte rate
-  view.setUint16(32, 2,           true);  // block align
-  view.setUint16(34, 16,          true);  // bits per sample
+  view.setUint32(16, 16,          true);
+  view.setUint16(20, 1,           true);
+  view.setUint16(22, 1,           true);
+  view.setUint32(24, targetRate,  true);
+  view.setUint32(28, targetRate * 2, true);
+  view.setUint16(32, 2,           true);
+  view.setUint16(34, 16,          true);
   write(36, 'data');
   view.setUint32(40, resampled.byteLength, true);
-
-  // Tulis PCM samples
   new Int16Array(wavBuf, 44).set(resampled);
 
-  console.log(`[audio] WAV siap: ${outSamples} samples @ ${targetRate}Hz (${(wavBuf.byteLength / 1024).toFixed(1)}KB)`);
   return new Blob([wavBuf], { type: 'audio/wav' });
 }
 
 // ══════════════════════════════════════════════════════
-//  Putar audio respons Otto
+//  PUTAR SEMUA PCM — dipanggil saat audio_stream_end
+//  Identik dengan Libo tapi pakai style Otto
 // ══════════════════════════════════════════════════════
-async function playResponseAudio(b64wav, text) {
-  if (!b64wav) {
-    respEl.textContent = text || '';
-    respEl.classList.remove('typing');
-    return;
-  }
-
+async function putarSemuaPCM() {
+  if (!pcmChunks.length) return;
   await ensureAudioCtx();
 
+  // Hitung total frame
+  const totalFrames = pcmChunks.reduce((s, c) => s + c.length, 0);
+  if (totalFrames === 0) return;
+
+  // Bangun AudioBuffer dari Int16 chunks
+  const audioBuffer = audioCtx.createBuffer(1, totalFrames, SAMPLE_RATE);
+  const channel     = audioBuffer.getChannelData(0);
+  let offset = 0;
+  for (const chunk of pcmChunks) {
+    for (let i = 0; i < chunk.length; i++) {
+      channel[offset++] = chunk[i] / 32768.0;
+    }
+  }
+  pcmChunks = []; // bersihkan memory
+
+  typingDur   = totalFrames / SAMPLE_RATE;
+  typingStart = audioCtx.currentTime;
+  typingText  = pendingText;
+  pendingText = '';
+
+  const barEls   = document.querySelectorAll('.bar');
+  const analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 32;
+  const dataArr  = new Uint8Array(analyser.frequencyBinCount);
+  const source   = audioCtx.createBufferSource();
+  const gain     = audioCtx.createGain();
+
+  source.buffer = audioBuffer;
+  source.connect(gain);
+  gain.connect(analyser);
+  analyser.connect(audioCtx.destination);
+
+  gain.gain.setValueAtTime(1.0, typingStart);
+  gain.gain.setTargetAtTime(0, typingStart + typingDur + 0.05, 0.25);
+
+  source.onended = () => {
+    vizBox.classList.remove('talking');
+    barEls.forEach(b => b.style.height = '8px');
+    btn.classList.remove('speaking', 'busy');
+    btn.classList.add('ready');
+    stopEmojiLoop();
+    stopTyping();
+    if (typingText) {
+      respEl.textContent = typingText;
+      respEl.classList.remove('typing');
+      typingText = '';
+    }
+    setEmoji(STATE_EMOJI.IDLE.e, STATE_EMOJI.IDLE.l);
+    setStatus('standby', '⏳ Standby');
+  };
+
+  source.start(0);
+  btn.classList.add('speaking');
+  btn.classList.remove('recording', 'busy');
+
+  // Typing loop
+  if (typingText) {
+    respEl.textContent = '';
+    respEl.classList.add('typing');
+    respWrap.scrollTop = 0;
+    startTyping();
+  }
+
+  // Emoji loop
+  startEmojiLoop(typingText, typingDur);
+  vizBox.classList.add('talking');
+  setStatus('speak', '🔊 Otto Berbicara...');
+
+  // Visualizer loop
+  if (animId) cancelAnimationFrame(animId);
+  function loopViz() {
+    if (!vizBox.classList.contains('talking')) { animId = null; return; }
+    analyser.getByteFrequencyData(dataArr);
+    barEls.forEach((bar, i) => {
+      const si = Math.floor((i / barEls.length) * dataArr.length);
+      bar.style.height = `${8 + (dataArr[si] / 255) * 60}px`;
+    });
+    animId = requestAnimationFrame(loopViz);
+  }
+  loopViz();
+}
+
+// ══════════════════════════════════════════════════════
+//  WebSocket
+// ══════════════════════════════════════════════════════
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
+  ws = new WebSocket(`${proto}${location.host}/ws`);
+
+  // PENTING: terima binary sebagai ArrayBuffer (bukan Blob)
+  ws.binaryType = 'arraybuffer';
+
+  let _pingInterval = null;
+
+  ws.onopen = () => {
+    wsRetry = 0;
+    setWsStatus('connected', 'online');
+    if (!isMicGranted) setStatus('', 'Ketuk lingkaran mic untuk mulai');
+    if (_pingInterval) clearInterval(_pingInterval);
+    _pingInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
+    }, 20000);
+  };
+
+  ws.onclose = () => {
+    setWsStatus('disconnected', 'offline');
+    if (_pingInterval) { clearInterval(_pingInterval); _pingInterval = null; }
+    if (wsIntentClose) return;
+    if (wsRetry >= WS_MAX_RETRY) { setWsStatus('disconnected', 'gagal terhubung'); return; }
+    wsRetry++;
+    setWsStatus('reconnecting', `reconnect ${wsRetry}...`);
+    setTimeout(connectWS, WS_RETRY_DELAY);
+  };
+
+  ws.onerror = () => {};
+
+  ws.onmessage = async (event) => {
+    // ── Binary message = chunk PCM Int16 ──────────────
+    if (event.data instanceof ArrayBuffer) {
+      if (!isCollecting) return;
+      pcmChunks.push(new Int16Array(event.data));
+      return;
+    }
+
+    // ── JSON message ──────────────────────────────────
+    let msg;
+    try { msg = JSON.parse(event.data); } catch { return; }
+
+    switch (msg.type) {
+
+      case 'pong':
+        break;
+
+      case 'transcript':
+        transcript.textContent = '» ' + msg.data;
+        transcript.classList.add('show');
+        setTimeout(() => transcript.classList.remove('show'), 5000);
+        break;
+
+      // Teks respons diterima lebih dulu sebelum audio selesai
+      case 'text_response':
+        pendingText = msg.text || msg.data || '';
+        break;
+
+      // Mulai kumpulkan PCM chunks
+      case 'audio_stream_start':
+        pcmChunks    = [];
+        isCollecting = true;
+        setStatus('active', '⏳ Memuat audio...');
+        setEmoji(STATE_EMOJI.THINKING.e, STATE_EMOJI.THINKING.l);
+        break;
+
+      // Semua PCM sudah diterima, putar sekarang
+      case 'audio_stream_end':
+        isCollecting = false;
+        btn.classList.remove('busy');
+        await putarSemuaPCM();
+        break;
+
+      // Fallback: server lama kirim response dengan audio base64
+      // (kompatibilitas mundur — akan dihapus jika server sudah full PCM)
+      case 'response':
+        btn.classList.remove('busy');
+        if (msg.meta && msg.meta.intent) showIntent(msg.meta.intent, msg.meta.skill);
+        if (msg.audio) {
+          // Mode lama: decode base64 WAV
+          await playBase64Audio(msg.audio, msg.data || '');
+        } else if (msg.data) {
+          respEl.textContent = msg.data;
+          respEl.classList.remove('typing');
+          btn.classList.add('ready');
+          setEmoji(STATE_EMOJI.IDLE.e, STATE_EMOJI.IDLE.l);
+          setStatus('', '⏳ Standby');
+        }
+        break;
+
+      case 'intent':
+        showIntent(msg.intent, msg.skill);
+        break;
+
+      case 'status':
+        setStatus('active', '⏳ ' + (msg.data || 'Memproses...'));
+        break;
+
+      case 'error':
+        setStatus('', '⚠️ ' + (msg.data || 'Error'));
+        respEl.textContent = msg.data || 'Terjadi kesalahan.';
+        btn.classList.remove('busy', 'recording');
+        btn.classList.add('ready');
+        setEmoji(STATE_EMOJI.IDLE.e, STATE_EMOJI.IDLE.l);
+        isCollecting = false;
+        pcmChunks    = [];
+        break;
+    }
+  };
+}
+
+// ── Fallback: putar audio base64 WAV (mode lama) ─────
+async function playBase64Audio(b64wav, text) {
+  await ensureAudioCtx();
   const binary = atob(b64wav);
   const bytes  = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -642,8 +822,10 @@ async function playResponseAudio(b64wav, text) {
   try {
     audioBuffer = await audioCtx.decodeAudioData(bytes.buffer);
   } catch(e) {
-    console.warn('[audio] Decode respons gagal:', e);
     respEl.textContent = text || '';
+    btn.classList.add('ready');
+    setEmoji(STATE_EMOJI.IDLE.e, STATE_EMOJI.IDLE.l);
+    setStatus('', '⏳ Standby');
     return;
   }
 
@@ -706,71 +888,6 @@ async function playResponseAudio(b64wav, text) {
   loopViz();
 }
 
-// ══════════════════════════════════════════════════════
-//  WebSocket
-// ══════════════════════════════════════════════════════
-function connectWS() {
-  const proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
-  ws = new WebSocket(`${proto}${location.host}/ws`);
-
-  let _pingInterval = null;
-
-  ws.onopen = () => {
-    wsRetry = 0;
-    setWsStatus('connected', 'online');
-    if (!isMicGranted) setStatus('', 'Ketuk lingkaran mic untuk mulai');
-    if (_pingInterval) clearInterval(_pingInterval);
-    _pingInterval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
-    }, 20000);
-  };
-
-  ws.onclose = () => {
-    setWsStatus('disconnected', 'offline');
-    if (wsIntentClose) return;
-    if (wsRetry >= WS_MAX_RETRY) { setWsStatus('disconnected', 'gagal terhubung'); return; }
-    wsRetry++;
-    setWsStatus('reconnecting', `reconnect ${wsRetry}...`);
-    setTimeout(connectWS, WS_RETRY_DELAY);
-  };
-
-  ws.onerror = () => {};
-
-  ws.onmessage = async (event) => {
-    let msg;
-    try { msg = JSON.parse(event.data); } catch { return; }
-
-    switch (msg.type) {
-      case 'pong':
-        break;
-
-      case 'transcript':
-        transcript.textContent = '» ' + msg.data;
-        transcript.classList.add('show');
-        setTimeout(() => transcript.classList.remove('show'), 5000);
-        break;
-
-      case 'response':
-        btn.classList.remove('busy');
-        if (msg.meta && msg.meta.intent) showIntent(msg.meta.intent, msg.meta.skill);
-        await playResponseAudio(msg.audio || '', msg.data || '');
-        break;
-
-      case 'status':
-        setStatus('active', '⏳ ' + (msg.data || 'Memproses...'));
-        break;
-
-      case 'error':
-        setStatus('', '⚠️ ' + (msg.data || 'Error'));
-        respEl.textContent = msg.data || 'Terjadi kesalahan.';
-        btn.classList.remove('busy', 'recording');
-        btn.classList.add('ready');
-        setEmoji(STATE_EMOJI.IDLE.e, STATE_EMOJI.IDLE.l);
-        break;
-    }
-  };
-}
-
 // ── Intent badge ──────────────────────────────────────
 function showIntent(intent, skill) {
   clearTimeout(intentTimer);
@@ -821,10 +938,12 @@ async function startRec() {
   respEl.classList.remove('typing');
   stopTyping(); stopEmojiLoop();
   transcript.classList.remove('show');
-  chunks = [];
+  pendingText  = '';
+  pcmChunks    = [];
+  isCollecting = false;
+  chunks       = [];
 
   try {
-    // Tidak paksa mimeType — biar browser pilih yang dia support
     mediaRecorder = new MediaRecorder(micStream);
     mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
 
@@ -848,10 +967,6 @@ async function startRec() {
         setEmoji(STATE_EMOJI.IDLE.e, STATE_EMOJI.IDLE.l);
         return;
       }
-
-      // Verifikasi header WAV sebelum kirim
-      const headerCheck = await wavBlob.slice(0, 4).text();
-      console.log('[audio] Header WAV:', headerCheck); // harus "RIFF"
 
       const b64 = await blobToBase64(wavBlob);
       if (ws.readyState === WebSocket.OPEN) {
