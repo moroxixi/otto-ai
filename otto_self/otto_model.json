@@ -4,7 +4,7 @@
   "revisit_cooldown_hours": 72,
   "response_depth": 0.4,
   "active_layer": 1,
-  "interaction_count": 7,
+  "interaction_count": 9,
   "layer_2_threshold": 10,
   "layer_3_threshold": 50
 }

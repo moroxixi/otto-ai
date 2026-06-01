@@ -139,36 +139,26 @@ class Transcriber:
                 tmp_path.write_bytes(wav_audio)
 
             else:
-                # Pipe langsung ke stdin — tidak perlu tulis file webm dulu
-                # Coba tanpa -f (auto-detect) karena iPhone kadang kirim format campuran
                 try:
                     result = subprocess.run([
                         "ffmpeg", "-y",
-                        "-i", "pipe:0",             # baca dari stdin
+                        "-f", "webm",
+                        "-i", "pipe:0",
                         "-ar", "16000", "-ac", "1",
+                        "-threads", "1",
                         "-f", "wav",
                         str(tmp_path)
-                    ], input=audio, capture_output=True, timeout=30)
+                    ], input=audio, capture_output=True, timeout=60)
 
                     if result.returncode != 0:
-                        # Fallback: coba paksa format ogg (iPhone kadang kirim ogg/opus)
-                        print(f"[transcriber] ffmpeg auto-detect gagal, coba ogg...")
-                        result = subprocess.run([
-                            "ffmpeg", "-y",
-                            "-f", "ogg", "-i", "pipe:0",
-                            "-ar", "16000", "-ac", "1",
-                            "-f", "wav",
-                            str(tmp_path)
-                        ], input=audio, capture_output=True, timeout=30)
-
-                        if result.returncode != 0:
-                            err = result.stderr.decode(errors="replace")
-                            print(f"[transcriber] ffmpeg gagal semua format: {err[:200]}")
-                            return ""
+                        err = result.stderr.decode(errors="replace")
+                        print(f"[transcriber] ffmpeg error: {err[:200]}")
+                        return ""
 
                 except subprocess.TimeoutExpired:
                     print("[transcriber] ffmpeg timeout — audio tidak bisa dikonversi")
                     return "TIMEOUT"
+
 
     # ── Jalankan Whisper ─────────────────────────────────────────────
             if mode == "command":
@@ -186,11 +176,7 @@ class Transcriber:
                 beam_size=5,
                 initial_prompt=WHISPER_INITIAL_PROMPT,
                 vad_filter=False,
-                vad_parameters={
-                    "min_silence_duration_ms": 300,   # turun dari 500 → lebih toleran
-                    "speech_pad_ms": 400,             # tambah padding sebelum/sesudah suara
-                    "threshold": 0.3,                 # turun dari default 0.5 → lebih sensitif
-                },
+                vad_parameters={"min_silence_duration_ms": 500},
             )
             semua_segment = list(segments)
             teks = " ".join(seg.text.strip() for seg in semua_segment).strip()
