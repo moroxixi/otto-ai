@@ -124,7 +124,7 @@
     }
     /* subtle version tag */
     h1::after {
-      content: ' v2';
+      content: ' AI-v2';
       font-size: 0.42rem;
       font-family: var(--font-mono);
       font-style: normal;
@@ -687,6 +687,11 @@ function connectWS() {
         if (msg.meta && msg.meta.intent) showIntent(msg.meta.intent, msg.meta.skill);
         // Putar audio (jika ada) + typing
         await playResponseAudio(msg.audio || '', msg.data || '');
+        break;
+
+
+	  case 'status':
+        setStatus('active', '⏳ ' + (msg.data || 'Memproses...'));
         break;
 
       case 'error':

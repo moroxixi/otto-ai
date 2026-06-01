@@ -21,7 +21,7 @@ from typing import Optional
 # ── Path ──────────────────────────────────────────────────────────────────────
 BASE_DIR   = Path("/data/asd/otto-ai")
 DATA_DIR   = BASE_DIR / "data"
-SELF_DIR   = BASE_DIR / "self"
+SELF_DIR   = BASE_DIR / "otto_self"
 MODEL_FILE = SELF_DIR / "otto_model.json"   # state kepribadian disimpan di sini
 
 

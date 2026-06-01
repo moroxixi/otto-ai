@@ -259,10 +259,12 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
         await _send_error(ws, "Format base64 audio tidak valid.")
         return
 
+    await _send_json(ws, "status", "Sedang mendengarkan...")
+
     try:
         transcript = await asyncio.wait_for(
             asyncio.to_thread(transcriber.transcribe, audio_bytes),
-            timeout=40.0
+            timeout=90.0  # naik dari 40 → 90 detik untuk Whisper medium
         )
     except asyncio.TimeoutError:
         logger.warning("[ws] STT timeout — paksa berhenti")
@@ -390,7 +392,10 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
 # ─────────────────────────── Helper ──────────────────────────────────────────
 
 async def _send_json(ws: WebSocket, msg_type: str, data: str) -> None:
-    await ws.send_json({"type": msg_type, "data": data})
+    try:
+        await ws.send_json({"type": msg_type, "data": data})
+    except (WebSocketDisconnect, Exception):
+        logger.warning("[ws] Gagal kirim '%s' — client sudah disconnect", msg_type)
 
 
 async def _send_error(ws: WebSocket, msg: str) -> None:

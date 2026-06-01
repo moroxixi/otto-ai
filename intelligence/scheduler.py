@@ -299,18 +299,12 @@ class Scheduler:
     # ── Task: Curiosity Check ─────────────────────────────────────────────────
 
     async def _task_curiosity_check(self) -> None:
-        """
-        Curiosity kirim pertanyaan ke Rofi.
-
-        Guard: hanya jalan jika profiler sudah analyze hari ini.
-        Artinya: curiosity hanya punya bahan segar setelah malam analyze.
-        """
-        if not self._profiler_analyzed_today:
-            logger.debug(
-                "[scheduler] curiosity_check skip — profiler belum analyze hari ini."
-            )
+        # Tetap prioritaskan hasil analyze malam,
+        # tapi kalau ada hipotesis dari scanner — boleh tanya juga
+        has_pending = len(self._profiler.get_pending()) > 0
+        if not self._profiler_analyzed_today and not has_pending:
+            logger.debug("skip — belum ada hipotesis sama sekali.")
             return
-
         question, hyp_id = await self._curiosity.try_ask()
 
         if question and hyp_id:

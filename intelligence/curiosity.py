@@ -101,8 +101,8 @@ def _get_min_confidence() -> float:
     boldness 0.0 → min_confidence 0.2 (berani tanya meski belum yakin)
     boldness 1.0 → min_confidence 0.7 (hanya tanya kalau sangat yakin)
     """
-    from core.config import INTELLIGENCE
-    boldness = INTELLIGENCE.get("curiosity_boldness", 0.5)
+    from otto_self.model import load_personality
+    boldness = load_personality().get("curiosity_boldness", 0.3)
     boldness = max(0.0, min(1.0, boldness))  # clamp 0–1
     return 0.2 + (boldness * 0.5)  # range: 0.2–0.7
 
