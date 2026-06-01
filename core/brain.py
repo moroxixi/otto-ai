@@ -95,6 +95,7 @@ class Brain:
         # Scanner real-time — inject hipotesis dari percakapan langsung
         # profiler boleh None (scanner akan skip jika tidak ada)
         self._scanner = ConversationScanner(profiler) if profiler else None
+        self._consolidator = init_consolidator(memory, groq_call_fn=self._call_groq)
 
         self._cached_prompt: str = ""
         self._cached_prompt_version: int = -1
@@ -219,7 +220,7 @@ class Brain:
             self._scan_conversation(user_text, "".join(full_text))  # ← TAMBAH
         )
         asyncio.create_task(
-            self._consolidator.maybe_consolidate(user_text, "".join(full_text))  # ← TAMBAH
+            self._consolidator.maybe_consolidate()  # ← TAMBAH
         )
         
 
