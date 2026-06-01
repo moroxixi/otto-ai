@@ -111,6 +111,8 @@ async def lifespan(app: FastAPI):
     logger.info("Otto shutting down…")
     if scheduler:
         await scheduler.stop()
+    if speaker:
+        speaker.shutdown()
     if brain:
         await brain.close()
 

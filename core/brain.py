@@ -160,7 +160,7 @@ class Brain:
             "[brain] key=%d tokens=%d+%d latency=%.0fms",
             self._key_idx, resp.prompt_tokens, resp.completion_tokens, latency,
         )
-
+        logger.info("[brain] LLM response diterima: %.60s...", text)
         asyncio.create_task(self._log_to_memory(user_text, text))
         asyncio.create_task(self._scan_conversation(user_text, text))
         return resp
@@ -353,7 +353,7 @@ class Brain:
             await asyncio.to_thread(self.memory.add_message, "user", user_text)
             await asyncio.to_thread(self.memory.add_message, "assistant", otto_text)
         except Exception as e:
-            logger.warning("Gagal log ke memory: %s", e)
+            logger.warning("Gagal log ke memory: %s", e, exc_info=True)
 
 
 # ─────────────────────────── Quick Test ─────────────────────────────────────

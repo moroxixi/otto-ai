@@ -41,6 +41,7 @@ class Speaker:
             "Kokoro TTS siap — voice=%s speed=%.1f lang=%s",
             self._voice, self._speed, self._lang
         )
+        self._active_procs: list[subprocess.Popen] = []
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -128,24 +129,41 @@ class Speaker:
         buf.seek(0)
         return buf.read()
 
+
+
     def _play_bytes_local(self, wav_bytes: bytes) -> None:
-        """
-        Putar WAV bytes langsung via pw-play.
-        Tulis ke temp file dulu karena pw-play butuh file path.
-        """
+        tmp_path = None
         try:
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
                 f.write(wav_bytes)
                 tmp_path = f.name
 
-            subprocess.run(
+            # ← GANTI subprocess.run → Popen agar bisa di-track
+            proc = subprocess.Popen(
                 [self._play_cmd, tmp_path],
-                check=True,
-                capture_output=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
             )
-        except subprocess.CalledProcessError as e:
-            logger.error("pw-play error: %s", e.stderr.decode())
+            self._active_procs.append(proc)
+            proc.wait()  # tunggu selesai (sama seperti run, tapi bisa di-interrupt)
+            self._active_procs = [p for p in self._active_procs if p.poll() is None]
+
         except Exception as e:
             logger.error("Gagal putar audio lokal: %s", e)
         finally:
-            Path(tmp_path).unlink(missing_ok=True)
+            if tmp_path:                         # ← UBAH ini
+                Path(tmp_path).unlink(missing_ok=True)
+    def shutdown(self) -> None:
+        """Matikan semua subprocess audio yang masih jalan."""
+        killed = 0
+        for proc in self._active_procs:
+            if proc.poll() is None:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                killed += 1
+        self._active_procs.clear()
+        if killed:
+            logger.info("[speaker] %d subprocess audio dihentikan saat shutdown.", killed)
