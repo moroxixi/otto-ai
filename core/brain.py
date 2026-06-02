@@ -77,23 +77,12 @@ class BrainResponse:
 # ─────────────────────────── Kelas Utama ────────────────────────────────────
 
 class Brain:
-    """
-    Otak Otto. Instantiate sekali, pakai terus.
-
-    Contoh:
-        brain = Brain(memory)
-        resp  = await brain.think("Menurutmu kenapa aku susah fokus?")
-        print(resp.text)
-    """
-
     def __init__(self, memory: MemoryManager, profiler=None) -> None:
         self.memory   = memory
         self._key_idx = 0
         self._keys    = self._load_keys()
         self._client  = httpx.AsyncClient(timeout=30.0)
 
-        # Scanner real-time — inject hipotesis dari percakapan langsung
-        # profiler boleh None (scanner akan skip jika tidak ada)
         self._scanner = ConversationScanner(profiler) if profiler else None
         self._consolidator = init_consolidator(memory, groq_call_fn=self._call_groq)
 
@@ -106,10 +95,7 @@ class Brain:
             "aktif" if self._scanner else "nonaktif (profiler tidak diberikan)",
         )
 
-
-
     async def _evolve_personality(self, interaction_type: str = "normal") -> None:
-        """Panggil after_interaction() dan simpan ke disk. Non-blocking."""
         try:
             personality = await asyncio.to_thread(load_personality)
             updated = after_interaction(personality, interaction_type)
@@ -119,23 +105,14 @@ class Brain:
         except Exception as e:
             logger.warning("[brain] Gagal evolve personality: %s", e)
 
-
-
     async def _scan_conversation(self, user_text: str, otto_text: str) -> None:
-        '''
-        Jalankan ConversationScanner secara non-blocking.
-        Dipanggil sebagai create_task — tidak boleh raise exception ke caller.
-        '''
         if self._scanner is None:
             return
         try:
             await self._scanner.scan(user_text, source="user")
-            # Otto text juga di-scan tapi dengan source="otto"
-            # (sebagian besar rules hanya aktif untuk source="user")
             await self._scanner.scan(otto_text, source="otto")
         except Exception as e:
             logger.warning("[brain] Scanner error (non-fatal): %s", e)
-
 
     # ── Public API ───────────────────────────────────────────────────────────
 
@@ -144,13 +121,6 @@ class Brain:
         user_text: str,
         history: list[dict] | None = None,
     ) -> BrainResponse:
-        """
-        Kirim pesan ke Groq dan kembalikan BrainResponse.
-
-        Args:
-            user_text : Teks dari Rofi (hasil STT atau ketikan)
-            history   : Riwayat percakapan [{"role": ..., "content": ...}]
-        """
         system_prompt = self._build_system_prompt()
         messages      = self._build_messages(system_prompt, history or [], user_text)
 
@@ -187,13 +157,6 @@ class Brain:
         user_text: str,
         history: list[dict] | None = None,
     ):
-        """
-        Generator async — yield token demi token (untuk streaming ke WebSocket).
-
-        Contoh:
-            async for token in brain.think_stream("Hei Otto"):
-                await ws.send_text(token)
-        """
         system_prompt = self._build_system_prompt()
         messages      = self._build_messages(system_prompt, history or [], user_text)
 
@@ -227,19 +190,10 @@ class Brain:
                 except (json.JSONDecodeError, KeyError):
                     continue
 
-        asyncio.create_task(
-            self._log_to_memory(user_text, "".join(full_text))
-        )
-        asyncio.create_task(
-            self._scan_conversation(user_text, "".join(full_text))  # ← TAMBAH
-        )
-        asyncio.create_task(
-            self._consolidator.maybe_consolidate()  # ← TAMBAH
-        )
-        asyncio.create_task(
-                self._evolve_personality("normal")
-        )
-        
+        asyncio.create_task(self._log_to_memory(user_text, "".join(full_text)))
+        asyncio.create_task(self._scan_conversation(user_text, "".join(full_text)))
+        asyncio.create_task(self._consolidator.maybe_consolidate())
+        asyncio.create_task(self._evolve_personality("normal"))
 
     async def close(self) -> None:
         await self._client.aclose()
@@ -247,21 +201,11 @@ class Brain:
     # ── System Prompt ─────────────────────────────────────────────────────────
 
     def _build_system_prompt(self) -> str:
-        """
-        Kembalikan system prompt — dari cache jika long-term memory tidak berubah.
-
-        Cara kerja:
-          - Setiap remember() / forget() menaikkan _long_term_version di memory
-          - Brain bandingkan versi tersimpan vs versi sekarang
-          - Sama → kembalikan cache (skip rebuild string panjang)
-          - Beda → rebuild, simpan ke cache
-        """
         current_version = self.memory.long_term_version()
 
         if self._cached_prompt and current_version == self._cached_prompt_version:
-            return self._cached_prompt   # cache hit
+            return self._cached_prompt
 
-        # Cache miss — rebuild
         profile_summary = self.memory.summary_for_llm(max_items=15)
         profile_sec = (
             _PROFILE_SECTION.format(profile_json=profile_summary)
@@ -297,53 +241,72 @@ class Brain:
 
     # ── Groq Call ─────────────────────────────────────────────────────────────
 
-    
     async def _call_groq(self, messages, retries=3, model=None) -> dict:
         """
-        Panggil Groq dengan retry + round-robin key rotation.
-        Jika satu key rate-limit → otomatis coba key berikutnya.
+        FIX BUG 4: retry loop sebelumnya bisa berjalan retries * len(keys) kali
+        bahkan setelah semua key dicoba dan semua rate-limit.
+        Sekarang: jika satu putaran penuh semua key kena 429 → langsung raise,
+        tidak loop terus. Ini mencegah request menggantung terlalu lama.
         """
         last_exc: Exception | None = None
         _model = model or MODEL
+        n_keys = len(self._keys)
 
-        for attempt in range(retries * len(self._keys)):
-            api_key = self._next_key()
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type":  "application/json",
-            }
-            payload = {
-                "model": _model,
-                "messages":    messages,
-                "temperature": 0.7,
-                "max_tokens":  1024,
-            }
+        for attempt in range(retries):
+            # Satu attempt = coba semua key sekali (round-robin)
+            rate_limited_count = 0
+            for _ in range(n_keys):
+                api_key = self._next_key()
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type":  "application/json",
+                }
+                payload = {
+                    "model":       _model,
+                    "messages":    messages,
+                    "temperature": 0.7,
+                    "max_tokens":  1024,
+                }
 
-            try:
-                resp = await self._client.post(GROQ_URL, json=payload, headers=headers)
-                if resp.status_code == 429:
-                    logger.warning("Key #%d rate-limit, coba key lain…", self._key_idx)
-                    last_exc = httpx.HTTPStatusError(
-                        "429", request=resp.request, response=resp
-                    )
-                    continue
-                resp.raise_for_status()
-                return resp.json()
+                try:
+                    resp = await self._client.post(GROQ_URL, json=payload, headers=headers)
+                    if resp.status_code == 429:
+                        logger.warning(
+                            "[brain] Key #%d rate-limit (attempt %d/%d)",
+                            self._key_idx, attempt + 1, retries
+                        )
+                        last_exc = httpx.HTTPStatusError(
+                            "429", request=resp.request, response=resp
+                        )
+                        rate_limited_count += 1
+                        continue
+                    resp.raise_for_status()
+                    return resp.json()
 
-            except httpx.TimeoutException as e:
-                logger.warning("Timeout attempt %d: %s", attempt + 1, e)
-                last_exc = e
-                await asyncio.sleep(0.5 * (attempt + 1))
-
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code >= 500:
-                    logger.warning("Server error attempt %d: %s", attempt + 1, e)
+                except httpx.TimeoutException as e:
+                    logger.warning("[brain] Timeout attempt %d: %s", attempt + 1, e)
                     last_exc = e
-                    await asyncio.sleep(1.0)
-                else:
-                    raise
+                    await asyncio.sleep(0.5 * (attempt + 1))
+                    break  # timeout → coba attempt berikutnya (bukan key berikutnya)
 
-        raise RuntimeError(f"Groq gagal setelah {retries} retry: {last_exc}") from last_exc
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code >= 500:
+                        logger.warning("[brain] Server error attempt %d: %s", attempt + 1, e)
+                        last_exc = e
+                        await asyncio.sleep(1.0)
+                        break
+                    else:
+                        raise
+
+            # Semua key kena 429 di attempt ini → tunggu sebentar sebelum retry
+            if rate_limited_count == n_keys:
+                logger.warning(
+                    "[brain] Semua %d key rate-limited (attempt %d/%d), tunggu 5s…",
+                    n_keys, attempt + 1, retries
+                )
+                await asyncio.sleep(5.0)
+
+        raise RuntimeError(f"Groq gagal setelah {retries} attempt: {last_exc}") from last_exc
 
     @staticmethod
     def _extract_text(raw: dict) -> str:

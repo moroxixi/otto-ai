@@ -46,7 +46,6 @@ tracker   = None
 transcriber: Transcriber | None = None
 active_ws: WebSocket | None = None
 
-# FIX BUG B: timeout dari config
 STT_TIMEOUT = WHISPER.get("stt_timeout", 120)
 
 CRASH_LOG = PATHS["base"] / "data" / "crash.log"
@@ -106,6 +105,13 @@ async def lifespan(app: FastAPI):
 
     brain = Brain(memory, profiler=profiler)
     logger.info("✓ Brain siap")
+
+    # FIX BUG 5: sync curiosity._pending_hypothesis_id dengan pending_state saat startup
+    # Jika server restart saat ada pending, curiosity harus tau
+    _recovered = pending_state.get()
+    if _recovered and curiosity:
+        curiosity._pending_hypothesis_id = _recovered
+        logger.info("[startup] Recovered pending hypothesis: %s", _recovered)
 
     scheduler.set_question_callback(_broadcast_curiosity_with_pending)
     await scheduler.start()
@@ -177,7 +183,6 @@ async def websocket_endpoint(ws: WebSocket):
     global active_ws
     await ws.accept()
 
-    # FIX BUG A: close koneksi lama sebelum di-overwrite
     if active_ws is not None and active_ws is not ws:
         try:
             await active_ws.close(code=1001, reason="Replaced by new connection")
@@ -239,7 +244,6 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
 
     await _send_json(ws, "status", "Sedang mendengarkan...")
 
-    # FIX BUG B + C: timeout dari config, CancelledError naik ke atas
     try:
         transcript = await asyncio.wait_for(
             asyncio.to_thread(transcriber.transcribe, audio_bytes),
@@ -253,7 +257,7 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
         return
     except asyncio.CancelledError:
         logger.info("[ws] STT dibatalkan (shutdown).")
-        raise  # biarkan naik — shutdown harus bersih
+        raise
     except Exception as e:
         logger.error("[ws] STT error: %s", e)
         await _send_error(ws, "Gagal transkripsi audio.")
@@ -274,10 +278,20 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
     if scheduler:
         scheduler.notify_conversation_active()
 
+    # FIX BUG 3: pending_id diambil SEKALI di awal, dan clear() dijamin
+    # dipanggil di finally block agar tidak bocor meski brain error
     pending_id = pending_state.get()
     if pending_id:
-        verdict = await curiosity.handle_response(pending_id, text)
-        pending_state.clear()
+        try:
+            verdict = await curiosity.handle_response(pending_id, text)
+        except Exception as e:
+            logger.error("[ws] handle_response error: %s", e)
+            verdict = "unclear"
+        finally:
+            # Selalu clear — baik verdict jelas maupun error/unclear
+            # "unclear" boleh tanya ulang nanti lewat scheduler
+            pending_state.clear()
+
         if verdict != "unclear":
             if watcher:
                 asyncio.create_task(
@@ -288,7 +302,10 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
             try:
                 await speaker.stream_to_ws(ws, ack)
             except Exception as e:
+                # FIX BUG 2: clear active_ws jika stream gagal (client disconnect)
                 logger.warning("[ws] Stream ack gagal: %s", e)
+                if active_ws is ws:
+                    active_ws = None
             return
 
     history = memory.get_recent_messages(limit=20)
@@ -305,7 +322,8 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
         try:
             await speaker.stream_to_ws(ws, reply_timeout)
         except Exception:
-            pass
+            if active_ws is ws:
+                active_ws = None
         return
     except asyncio.CancelledError:
         logger.info("[ws] Brain dibatalkan (shutdown).")
@@ -352,7 +370,10 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
     try:
         await speaker.stream_to_ws(ws, reply)
     except Exception as e:
+        # FIX BUG 2: clear active_ws jika stream gagal (client disconnect di tengah TTS)
         logger.warning("[ws] Stream TTS gagal: %s", e)
+        if active_ws is ws:
+            active_ws = None
 
 
 async def _send_json(ws: WebSocket, msg_type: str, data: str) -> None:
@@ -376,7 +397,6 @@ async def _broadcast_curiosity(question: str) -> None:
     except Exception as e:
         logger.warning("[curiosity] TTS lokal gagal: %s", e)
 
-    # FIX BUG #3: guard active_ws
     if active_ws:
         try:
             await active_ws.send_json({

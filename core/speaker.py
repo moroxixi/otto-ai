@@ -67,7 +67,6 @@ class Speaker:
     def speak_local(self, text: str) -> None:
         if not text.strip():
             return
-        # FIX BUG #4: GC sebelum spawn proses baru, bukan hanya setelahnya
         self._gc_procs()
         samples, sr = self._generate(text)
         wav_bytes = self._to_wav_bytes(samples, sr)
@@ -208,12 +207,6 @@ class Speaker:
     # ── Internal ──────────────────────────────────────────────────────────────
 
     def _gc_procs(self) -> None:
-        """
-        FIX BUG #4: buang proses yang sudah selesai dari _active_procs.
-        Dipanggil sebelum spawn proses baru — bukan hanya setelah wait().
-        Sebelumnya GC hanya terjadi setelah proc.wait() di _play_bytes_local,
-        sehingga proses lama yang sudah exit tapi belum di-wait tetap menumpuk.
-        """
         before = len(self._active_procs)
         self._active_procs = [p for p in self._active_procs if p.poll() is None]
         cleaned = before - len(self._active_procs)
@@ -240,19 +233,23 @@ class Speaker:
         return buf.read()
 
     def _play_bytes_local(self, wav_bytes: bytes) -> None:
+        """
+        FIX BUG 1: tambahkan --target self._sink_id agar audio
+        selalu keluar ke sink yang benar (sink_id 58), konsisten
+        dengan ucapkan_laptop_async.
+        """
         tmp_path = None
         try:
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
                 f.write(wav_bytes)
                 tmp_path = f.name
             proc = subprocess.Popen(
-                [self._play_cmd, tmp_path],
+                [self._play_cmd, "--target", str(self._sink_id), tmp_path],
                 stdout = subprocess.DEVNULL,
                 stderr = subprocess.PIPE,
             )
             self._active_procs.append(proc)
             proc.wait()
-            # GC setelah wait — tangkap proses yang baru saja selesai
             self._gc_procs()
         except Exception as e:
             logger.error("Gagal putar audio lokal: %s", e)
