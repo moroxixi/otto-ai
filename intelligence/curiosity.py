@@ -44,6 +44,7 @@ import random
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
+from core.vocabulary import get_pending_review
 
 logger = logging.getLogger("otto.intelligence.curiosity")
 

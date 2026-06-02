@@ -196,15 +196,19 @@ async def websocket_endpoint(ws: WebSocket):
     client = ws.client.host if ws.client else "unknown"
     logger.info("[ws] Client terhubung: %s", client)
 
-    await _send_json(ws, "response", "Otto aktif. Hei, apa yang sedang kamu lakukan Rofi?")
+    await _send_json(ws, "response", "Otto aktif. Hei Rofi, apa ada yang ingin kamu ceritakan?")
     try:
-        await speaker.stream_to_ws(ws, "Otto aktif. Hei, apa yang sedang kamu lakukan Rofi")
+        await speaker.stream_to_ws(ws, "Otto aktif. Hei Rofi, apa ada yang ingin kamu ceritakan?")
     except Exception as e:
         logger.warning("[ws] Stream salam gagal: %s", e)
 
     try:
         while True:
-            raw = await ws.receive_json()
+            try:
+                raw = await ws.receive_json()
+            except RuntimeError:
+                logger.info("[ws] Client disconnect saat receive — koneksi tidak valid.")
+                break
             msg_type = raw.get("type", "")
 
             if msg_type == "ping":

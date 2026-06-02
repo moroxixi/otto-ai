@@ -28,6 +28,7 @@ from core.memory import MemoryManager
 from otto_self.model import self_summary_text, load_personality, after_interaction, save_personality
 from intelligence.conversation_scanner import ConversationScanner
 from intelligence.consolidator import init_consolidator
+from core.vocabulary import tambah_alias, tambah_istilah
 
 logger = logging.getLogger("otto.brain")
 
@@ -150,6 +151,7 @@ class Brain:
         asyncio.create_task(self._scan_conversation(user_text, text))
         asyncio.create_task(self._consolidator.maybe_consolidate())
         asyncio.create_task(self._evolve_personality("normal"))
+        asyncio.create_task(self._scan_for_vocab(user_text))
         return resp
 
     async def think_stream(
@@ -339,6 +341,19 @@ class Brain:
             await asyncio.to_thread(self.memory.add_message, "assistant", otto_text)
         except Exception as e:
             logger.warning("Gagal log ke memory: %s", e, exc_info=True)
+
+    async def _scan_for_vocab(self, teks: str) -> None:
+        """
+        Deteksi sederhana: kata kapital yang tidak dikenal
+        kemungkinan nama yang Whisper salah tulis.
+        """
+        import re
+        kata_kapital = re.findall(r'\b[A-Z][a-z]{2,}\b', teks)
+        known = {"Otto", "Rofi"}  # isi dari vocabulary.json nanti
+        for kata in kata_kapital:
+            if kata not in known:
+                # Simpan sebagai istilah baru, tunggu konfirmasi Rofi
+                tambah_istilah(kata, sumber="otto")
 
 
 # ─────────────────────────── Quick Test ─────────────────────────────────────
