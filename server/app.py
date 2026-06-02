@@ -122,6 +122,7 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("Otto shutting down…")
+    memory.persist_short_term()
     if scheduler: await scheduler.stop()
     if watcher:   await watcher.flush()
     if speaker:   speaker.shutdown()

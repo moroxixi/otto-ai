@@ -15,7 +15,7 @@ from core.config import PATHS, MEMORY
 
 logger = logging.getLogger("otto.core.memory")
 
-SHORT_TERM_PERSIST_PATH = Path("/data/asd/otto-ai/data/short_term_cache.json")
+SHORT_TERM_PERSIST_PATH = PATHS["short_term_cache"]
 
 class MemoryManager:
     """

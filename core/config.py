@@ -19,6 +19,7 @@ PATHS = {
     "profile":       BASE_DIR / "data" / "profile.json",
     "activity_log":  BASE_DIR / "data" / "activity.log",
     "hypotheses":    BASE_DIR / "data" / "hypotheses.json",
+    "short_term_cache": BASE_DIR / "data" / "short_term_cache.json",
     "ssl_cert":      BASE_DIR / "ssl" / "cert.pem",
     "ssl_key":       BASE_DIR / "ssl" / "key.pem",
 }
