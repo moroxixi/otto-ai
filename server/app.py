@@ -46,7 +46,7 @@ tracker   = None
 transcriber: Transcriber | None = None
 active_ws: WebSocket | None = None
 
-STT_TIMEOUT = WHISPER.get("stt_timeout", 120)
+STT_TIMEOUT = WHISPER.get("stt_timeout", 300)
 
 CRASH_LOG = PATHS["base"] / "data" / "crash.log"
 
@@ -194,7 +194,7 @@ async def websocket_endpoint(ws: WebSocket):
     client = ws.client.host if ws.client else "unknown"
     logger.info("[ws] Client terhubung: %s", client)
 
-    await _send_json(ws, "response", "Otto aktif. Hei, ada yang bisa aku bantu?")
+    await _send_json(ws, "response", "Otto aktif. Hei, apa yang sedang kamu lakukan Rofi?")
     try:
         await speaker.stream_to_ws(ws, "Otto aktif. Hei, ada yang bisa aku bantu?")
     except Exception as e:
@@ -242,7 +242,7 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
         await _send_error(ws, "Format base64 audio tidak valid.")
         return
 
-    await _send_json(ws, "status", "Sedang mendengarkan...")
+    await _send_json(ws, "status", "Sedang memproses suara...")
 
     try:
         transcript = await asyncio.wait_for(
@@ -254,6 +254,7 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
         await _send_json(ws, "response",
             "Maaf Rofi, tadi aku tidak berhasil mendengar dengan baik. Bisa kamu ulangi?"
         )
+        await websocket.send_json({"type": "timeout", "data": "STT timeout"})
         return
     except asyncio.CancelledError:
         logger.info("[ws] STT dibatalkan (shutdown).")

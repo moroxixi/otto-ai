@@ -59,11 +59,11 @@ WHISPER = {
     # "tiny"   → perintah pendek, latency rendah
     # "medium" → transkripsi panjang, lebih akurat
     "model_command": "small",
-    "model_chat":    "medium",
+    "model_chat":    "small",
     "language":      "id",        # Bahasa Indonesia
     "device":        "cpu",       # ganti "cuda" kalau ada GPU
     "compute_type":  "int8",     # hemat RAM di CPU
-    "stt_timeout": 120,
+    "stt_timeout": 300,
 }
 
 # ─── PIPER TTS ────────────────────────────────────────────────────────────────
@@ -78,7 +78,7 @@ KOKORO = {
     "model":  BASE_DIR / "voices" / "kokoro" / "kokoro-v1.0.onnx",
     "voices": BASE_DIR / "voices" / "kokoro" / "voices-v1.0.bin",
     # Ganti voice di sini untuk eksperimen
-    "voice":  "am_adam",
+    "voice":  "am_michael",
     "speed":  1.0,
     "lang":   "id",
 }

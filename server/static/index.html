@@ -794,6 +794,17 @@ function connectWS() {
         setStatus('active', '⏳ ' + (msg.data || 'Memproses...'));
         break;
 
+	  case 'timeout':
+        setStatus('', '⏱️ Waktu habis, coba lagi');
+        respEl.textContent = 'Timeout — Otto tidak mendengar respons. Coba bicara lagi.';
+        btn.classList.remove('busy', 'recording');
+        btn.classList.add('ready');
+        setEmoji(STATE_EMOJI.IDLE.e, STATE_EMOJI.IDLE.l);
+        isCollecting = false;
+        pcmChunks    = [];
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        break;
+
       case 'error':
         setStatus('', '⚠️ ' + (msg.data || 'Error'));
         respEl.textContent = msg.data || 'Terjadi kesalahan.';
