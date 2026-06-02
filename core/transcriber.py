@@ -1,6 +1,6 @@
 # core/transcriber.py
-# Dual-mode Whisper: small (<= 3.5 detik) → latency rendah
-#                   medium (> 3.5 detik)  → akurasi tinggi
+# Dual-mode Whisper: small (<= 8 detik) → latency rendah
+#                   medium (> 8 detik)  → akurasi tinggi
 
 import io
 import re
@@ -82,7 +82,6 @@ class Transcriber:
             tmp = Path(f.name)
             f.write(audio)
         try:
-            tmp.write_bytes(audio)
             print(f"[transcriber] Pakai {mode}")
             segments, _ = model.transcribe(
                 str(tmp),
