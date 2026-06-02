@@ -405,6 +405,7 @@ async def _broadcast_curiosity(question: str) -> None:
     except Exception as e:
         logger.warning("[curiosity] TTS lokal gagal: %s", e)
 
+    # FIX BUG #3: guard active_ws sebelum stream — ws bisa disconnect kapan saja
     if active_ws:
         try:
             await active_ws.send_json({

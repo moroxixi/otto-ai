@@ -1,6 +1,6 @@
 # core/transcriber.py
-# Dual-mode Whisper: tiny (<= 3.5 detik) → latency rendah
-#                   medium (> 3.5 detik) → akurasi tinggi
+# Dual-mode Whisper: small (<= 3.5 detik) → latency rendah
+#                   medium (> 3.5 detik)  → akurasi tinggi
 
 import io
 import re
@@ -30,28 +30,35 @@ def _wav_duration(audio: bytes) -> float:
 class Transcriber:
 
     def __init__(self):
-        # ── Load tiny dulu (cepat, selalu dipakai) ────────────────────────
-        print("[transcriber] Loading Whisper small...")
+        # Ambil nama model dari config — konsisten dengan WHISPER dict
+        model_command = WHISPER.get("model_command", "small")
+        model_chat    = WHISPER.get("model_chat", "medium")
+        device        = WHISPER.get("device", "cpu")
+        compute_type  = WHISPER.get("compute_type", "int8")
+
+        # ── Load model command (kalimat pendek, latency rendah) ───────────
+        print(f"[transcriber] Loading Whisper {model_command}...")
         self._small = WhisperModel(
-            "small",
-            device       = WHISPER.get("device", "cpu"),
-            compute_type = WHISPER.get("compute_type", "int8"),
-            num_workers  = 2,
-            cpu_threads  = 4,
+            model_command,
+            device           = device,
+            compute_type     = compute_type,
+            num_workers      = 2,
+            cpu_threads      = 4,
             local_files_only = True,
         )
-        print("[transcriber] Whisper small siap.")
-       
-        print("[transcriber] Loading Whisper medium...")
+        print(f"[transcriber] Whisper {model_command} siap.")
+
+        # ── Load model chat (kalimat panjang, akurasi lebih baik) ─────────
+        print(f"[transcriber] Loading Whisper {model_chat}...")
         self._medium = WhisperModel(
-            "medium",
-            device       = WHISPER.get("device", "cpu"),
-            compute_type = WHISPER.get("compute_type", "int8"),
-            num_workers  = 2,
-            cpu_threads  = 4,
+            model_chat,
+            device           = device,
+            compute_type     = compute_type,
+            num_workers      = 2,
+            cpu_threads      = 4,
             local_files_only = True,
         )
-        print("[transcriber] Whisper medium siap.")
+        print(f"[transcriber] Whisper {model_chat} siap.")
 
     def transcribe(self, audio: bytes) -> str:
         """
@@ -68,7 +75,6 @@ class Transcriber:
             model = self._small
             mode  = f"small ({durasi:.1f}s)"
         else:
-            self._ensure_medium()
             model = self._medium
             mode  = f"medium ({durasi:.1f}s)"
 
@@ -83,9 +89,9 @@ class Transcriber:
                 initial_prompt = WHISPER_INITIAL_PROMPT,
                 vad_filter     = True,
                 vad_parameters = {
-                    "threshold":             0.25,
+                    "threshold":               0.25,
                     "min_silence_duration_ms": 200,
-                    "speech_pad_ms":         300,
+                    "speech_pad_ms":           300,
                 },
             )
             teks = " ".join(s.text.strip() for s in segments).strip()
@@ -104,7 +110,7 @@ class Transcriber:
         for i, kata in enumerate(kata_kata):
             kata_bersih = re.sub(r'[^\w]', '', kata.lower())
             if kata_bersih in NAMA_ALIAS:
-                is_awal        = (i == 0)
+                is_awal          = (i == 0)
                 is_setelah_tanda = (i > 0 and kata_kata[i-1][-1] in '.,!?')
                 if is_awal or is_setelah_tanda:
                     hasil.append(NAMA_ALIAS[kata_bersih])

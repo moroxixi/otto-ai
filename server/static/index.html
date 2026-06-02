@@ -773,20 +773,16 @@ function connectWS() {
         await putarSemuaPCM();
         break;
 
-      // Fallback: server lama kirim response dengan audio base64
-      // (kompatibilitas mundur — akan dihapus jika server sudah full PCM)
       case 'response':
         btn.classList.remove('busy');
         if (msg.meta && msg.meta.intent) showIntent(msg.meta.intent, msg.meta.skill);
         if (msg.audio) {
-          // Mode lama: decode base64 WAV
+          // Mode lama: decode base64 WAV (server belum full PCM)
           await playBase64Audio(msg.audio, msg.data || '');
         } else if (msg.data) {
-          respEl.textContent = msg.data;
-          respEl.classList.remove('typing');
-          btn.classList.add('ready');
-          setEmoji(STATE_EMOJI.IDLE.e, STATE_EMOJI.IDLE.l);
-          setStatus('', '⏳ Standby');
+          // FIX: set pendingText, bukan langsung ke DOM
+          // putarSemuaPCM() akan tampilkan teks ini sync dengan audio
+          pendingText = msg.data;
         }
         break;
 

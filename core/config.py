@@ -58,7 +58,7 @@ MODELS = {
 WHISPER = {
     # "tiny"   → perintah pendek, latency rendah
     # "medium" → transkripsi panjang, lebih akurat
-    "model_command": "tiny",
+    "model_command": "small",
     "model_chat":    "medium",
     "language":      "id",        # Bahasa Indonesia
     "device":        "cpu",       # ganti "cuda" kalau ada GPU
