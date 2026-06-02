@@ -1,28 +1,6 @@
 """
 server/app.py — Entry Point Otto
 ==================================
-Alur lengkap:
-  iPhone (WebSocket /ws) → app.py
-      → transcriber.transcribe(audio_bytes)   [Whisper tiny/medium auto]
-      → brain.think(teks)                     [Groq 70b]
-      → speaker.stream_to_ws(ws, reply)       [Piper PCM streaming]
-
-Protocol pesan (JSON):
-  Client → Server:
-    { "type": "audio",  "data": "<base64 WAV>" }
-    { "type": "text",   "data": "teks langsung" }
-    { "type": "ping" }
-
-  Server → Client (JSON):
-    { "type": "transcript", "data": "teks hasil STT" }
-    { "type": "response",   "data": "teks Otto", "meta": {intent, skill} }
-    { "type": "audio_stream_start" }   ← mulai terima bytes PCM
-    { "type": "audio_stream_end"   }   ← selesai stream
-    { "type": "error",      "data": "pesan error" }
-    { "type": "pong" }
-
-  Server → Client (bytes):
-    <raw PCM chunk>   ← dikirim di antara audio_stream_start dan audio_stream_end
 """
 
 from __future__ import annotations
@@ -44,7 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from core.config import SERVER, DEBUG, PATHS
+from core.config import SERVER, DEBUG, PATHS, WHISPER
 from core.memory import memory
 from core.brain import Brain, BrainResponse
 from core.speaker import Speaker
@@ -58,8 +36,6 @@ from intelligence.pending_state import pending_state
 
 logger = logging.getLogger("otto.app")
 
-# ─────────────────────────── State Global ────────────────────────────────────
-
 brain:       Brain       | None = None
 speaker:     Speaker     | None = None
 watcher   = None
@@ -69,6 +45,9 @@ scheduler = None
 tracker   = None
 transcriber: Transcriber | None = None
 active_ws: WebSocket | None = None
+
+# FIX BUG B: timeout dari config
+STT_TIMEOUT = WHISPER.get("stt_timeout", 120)
 
 CRASH_LOG = PATHS["base"] / "data" / "crash.log"
 
@@ -89,8 +68,6 @@ def _setup_signal_handlers() -> None:
         raise SystemExit(0)
     signal.signal(signal.SIGTERM, _handle_sigterm)
 
-
-# ─────────────────────────── Startup / Shutdown ──────────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -133,24 +110,15 @@ async def lifespan(app: FastAPI):
     scheduler.set_question_callback(_broadcast_curiosity_with_pending)
     await scheduler.start()
     logger.info("✓ Intelligence layer siap")
-
-    logger.info(
-        "── Otto siap. WebSocket: wss://%s:%d/ws ──",
-        SERVER["host"], SERVER["port"]
-    )
+    logger.info("── Otto siap. WebSocket: wss://%s:%d/ws ──", SERVER["host"], SERVER["port"])
 
     yield
 
     logger.info("Otto shutting down…")
-
-    if scheduler:
-        await scheduler.stop()
-    if watcher:
-        await watcher.flush()
-    if speaker:
-        speaker.shutdown()
-    if brain:
-        await brain.close()
+    if scheduler: await scheduler.stop()
+    if watcher:   await watcher.flush()
+    if speaker:   speaker.shutdown()
+    if brain:     await brain.close()
 
     tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
     if tasks:
@@ -160,8 +128,6 @@ async def lifespan(app: FastAPI):
         await asyncio.gather(*tasks, return_exceptions=True)
         logger.info("Semua task selesai dibersihkan.")
 
-
-# ─────────────────────────── App ─────────────────────────────────────────────
 
 app = FastAPI(title="Otto AI", lifespan=lifespan)
 
@@ -206,19 +172,24 @@ async def growth_page():
     return {"error": "growth_history.html belum ada di server/static/"}
 
 
-# ─────────────────────────── WebSocket ───────────────────────────────────────
-
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     global active_ws
     await ws.accept()
+
+    # FIX BUG A: close koneksi lama sebelum di-overwrite
+    if active_ws is not None and active_ws is not ws:
+        try:
+            await active_ws.close(code=1001, reason="Replaced by new connection")
+            logger.info("[ws] Koneksi lama ditutup — diganti koneksi baru.")
+        except Exception:
+            pass
+
     active_ws = ws
     client = ws.client.host if ws.client else "unknown"
     logger.info("[ws] Client terhubung: %s", client)
 
-    # Kirim salam teks dulu (tanpa audio streaming — sesaat setelah connect)
     await _send_json(ws, "response", "Otto aktif. Hei, ada yang bisa aku bantu?")
-    # Stream audio salam ke iPhone
     try:
         await speaker.stream_to_ws(ws, "Otto aktif. Hei, ada yang bisa aku bantu?")
     except Exception as e:
@@ -231,19 +202,17 @@ async def websocket_endpoint(ws: WebSocket):
 
             if msg_type == "ping":
                 await ws.send_json({"type": "pong"})
-
             elif msg_type == "audio":
                 await _handle_audio(ws, raw)
-
             elif msg_type == "text":
                 await _handle_text(ws, raw.get("data", "").strip())
-
             else:
                 logger.warning("[ws] Tipe pesan tidak dikenal: %s", msg_type)
                 await _send_error(ws, f"Tipe pesan '{msg_type}' tidak dikenal.")
 
     except WebSocketDisconnect:
-        active_ws = None
+        if active_ws is ws:
+            active_ws = None
         logger.info("[ws] Client disconnect: %s", client)
     except Exception as e:
         logger.error("[ws] Error tak terduga: %s", e, exc_info=True)
@@ -251,9 +220,9 @@ async def websocket_endpoint(ws: WebSocket):
             await _send_error(ws, "Terjadi error internal.")
         except Exception:
             pass
+        if active_ws is ws:
+            active_ws = None
 
-
-# ─────────────────────────── Handler ─────────────────────────────────────────
 
 async def _handle_audio(ws: WebSocket, msg: dict) -> None:
     b64 = msg.get("data", "")
@@ -270,17 +239,21 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
 
     await _send_json(ws, "status", "Sedang mendengarkan...")
 
+    # FIX BUG B + C: timeout dari config, CancelledError naik ke atas
     try:
         transcript = await asyncio.wait_for(
             asyncio.to_thread(transcriber.transcribe, audio_bytes),
-            timeout=90.0
+            timeout=STT_TIMEOUT,
         )
     except asyncio.TimeoutError:
-        logger.warning("[ws] STT timeout")
+        logger.warning("[ws] STT timeout setelah %ds", STT_TIMEOUT)
         await _send_json(ws, "response",
             "Maaf Rofi, tadi aku tidak berhasil mendengar dengan baik. Bisa kamu ulangi?"
         )
         return
+    except asyncio.CancelledError:
+        logger.info("[ws] STT dibatalkan (shutdown).")
+        raise  # biarkan naik — shutdown harus bersih
     except Exception as e:
         logger.error("[ws] STT error: %s", e)
         await _send_error(ws, "Gagal transkripsi audio.")
@@ -301,7 +274,6 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
     if scheduler:
         scheduler.notify_conversation_active()
 
-    # ── Cek jawaban curiosity pending ─────────────────────────────────────────
     pending_id = pending_state.get()
     if pending_id:
         verdict = await curiosity.handle_response(pending_id, text)
@@ -319,7 +291,6 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
                 logger.warning("[ws] Stream ack gagal: %s", e)
             return
 
-    # ── Brain ─────────────────────────────────────────────────────────────────
     history = memory.get_recent_messages(limit=20)
 
     try:
@@ -336,6 +307,9 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
         except Exception:
             pass
         return
+    except asyncio.CancelledError:
+        logger.info("[ws] Brain dibatalkan (shutdown).")
+        raise
     except Exception as e:
         logger.error("[ws] Brain error: %s", e)
         await _send_error(ws, "Otto sedang ada masalah.")
@@ -346,7 +320,6 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
     if tracker:
         tracker.record_interaction(text_length=len(text))
 
-    # ── Inject curiosity di akhir reply ──────────────────────────────────────
     injected_hyp_id = None
     if curiosity and not pending_state.get():
         try:
@@ -367,7 +340,6 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
             watcher.log(text, intent="chat", skill=skill_tag)
         )
 
-    # ── Kirim teks response dulu (agar UI langsung update) ───────────────────
     await ws.send_json({
         "type": "response",
         "data": reply,
@@ -377,35 +349,34 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
         },
     })
 
-    # ── Stream PCM TTS ke iPhone ──────────────────────────────────────────────
     try:
         await speaker.stream_to_ws(ws, reply)
     except Exception as e:
         logger.warning("[ws] Stream TTS gagal: %s", e)
 
 
-# ─────────────────────────── Helper ──────────────────────────────────────────
-
 async def _send_json(ws: WebSocket, msg_type: str, data: str) -> None:
     try:
         await ws.send_json({"type": msg_type, "data": data})
-    except (WebSocketDisconnect, Exception):
+    except Exception:
         logger.warning("[ws] Gagal kirim '%s' — client sudah disconnect", msg_type)
 
 
 async def _send_error(ws: WebSocket, msg: str) -> None:
-    await ws.send_json({"type": "error", "data": msg})
+    try:
+        await ws.send_json({"type": "error", "data": msg})
+    except Exception:
+        pass
 
 
 async def _broadcast_curiosity(question: str) -> None:
-    """Curiosity dari scheduler — putar laptop + stream ke iPhone."""
     try:
         await speaker.ucapkan_laptop_async(question)
         logger.info("[curiosity] Diputar di laptop.")
     except Exception as e:
         logger.warning("[curiosity] TTS lokal gagal: %s", e)
 
-    # FIX BUG #3: guard active_ws sebelum stream — ws bisa disconnect kapan saja
+    # FIX BUG #3: guard active_ws
     if active_ws:
         try:
             await active_ws.send_json({
@@ -423,12 +394,9 @@ async def _broadcast_curiosity_with_pending(question: str, hyp_id: str) -> None:
     await _broadcast_curiosity(question)
 
 
-# ─────────────────────────── Main ────────────────────────────────────────────
-
 if __name__ == "__main__":
     ssl_keyfile  = str(PATHS.get("ssl_key",  ROOT / "ssl" / "key.pem"))
     ssl_certfile = str(PATHS.get("ssl_cert", ROOT / "ssl" / "cert.pem"))
-
     use_ssl = Path(ssl_keyfile).exists() and Path(ssl_certfile).exists()
 
     uvicorn.run(

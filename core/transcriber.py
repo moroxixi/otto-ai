@@ -13,7 +13,7 @@ from core.config import WHISPER
 from core.vocabulary import WHISPER_INITIAL_PROMPT, NAMA_ALIAS
 
 # ── Threshold durasi (detik) ──────────────────────────────────────────────────
-TINY_THRESHOLD_SEC = 3.5
+SMALL_THRESHOLD_SEC = 8
 
 
 def _wav_duration(audio: bytes) -> float:
@@ -71,7 +71,7 @@ class Transcriber:
             return ""
 
         durasi = _wav_duration(audio)
-        if durasi <= TINY_THRESHOLD_SEC:
+        if durasi <= SMALL_THRESHOLD_SEC:
             model = self._small
             mode  = f"small ({durasi:.1f}s)"
         else:

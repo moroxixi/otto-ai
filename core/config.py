@@ -62,7 +62,8 @@ WHISPER = {
     "model_chat":    "medium",
     "language":      "id",        # Bahasa Indonesia
     "device":        "cpu",       # ganti "cuda" kalau ada GPU
-    "compute_type":  "int8",      # hemat RAM di CPU
+    "compute_type":  "int8",     # hemat RAM di CPU
+    "stt_timeout": 120,
 }
 
 # ─── PIPER TTS ────────────────────────────────────────────────────────────────

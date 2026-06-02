@@ -23,14 +23,13 @@ import soundfile as sf
 
 logger = logging.getLogger("otto.speaker")
 
-# ── Konstanta PCM streaming (sama persis seperti Libo) ───────────────────────
+# ── Konstanta PCM streaming ───────────────────────────────────────────────────
 PIPER_SAMPLE_RATE   = 22050
 PIPER_CHANNELS      = 1
 PIPER_SAMPLE_WIDTH  = 2          # 16-bit PCM
-# ~0.5 detik per chunk raw bytes
 CHUNK_BYTES         = int(PIPER_SAMPLE_RATE * PIPER_CHANNELS * PIPER_SAMPLE_WIDTH * 0.5)
-PREBUFFER_CHUNKS    = 3          # kumpulkan dulu sebelum mulai stream
-SILENCE_PADDING_MS  = 1200       # ms silence di akhir agar kata terakhir tidak terpotong
+PREBUFFER_CHUNKS    = 3
+SILENCE_PADDING_MS  = 1200
 
 
 class Speaker:
@@ -60,35 +59,30 @@ class Speaker:
     # ── Public API ────────────────────────────────────────────────────────────
 
     def synthesize(self, text: str) -> bytes:
-        """Generate audio → return WAV bytes. Untuk fallback non-streaming."""
         if not text.strip():
             return b""
         samples, sr = self._generate(text)
         return self._to_wav_bytes(samples, sr)
 
     def speak_local(self, text: str) -> None:
-        """Generate audio → putar langsung via pw-play di laptop."""
         if not text.strip():
             return
+        # FIX BUG #4: GC sebelum spawn proses baru, bukan hanya setelahnya
+        self._gc_procs()
         samples, sr = self._generate(text)
         wav_bytes = self._to_wav_bytes(samples, sr)
         self._play_bytes_local(wav_bytes)
 
     async def speak_local_async(self, text: str) -> None:
-        """Async wrapper untuk speak_local — agar tidak block event loop."""
         await asyncio.to_thread(self.speak_local, text)
 
     def synthesize_or_speak(self, text: str, output: str = "ws") -> bytes:
-        """
-        output="ws"     → return WAV bytes
-        output="laptop" → putar lokal, return b""
-        output="both"   → putar lokal DAN return WAV bytes
-        """
         if not text.strip():
             return b""
         samples, sr = self._generate(text)
         wav_bytes = self._to_wav_bytes(samples, sr)
         if output in ("laptop", "both"):
+            self._gc_procs()
             self._play_bytes_local(wav_bytes)
         if output in ("ws", "both"):
             return wav_bytes
@@ -96,16 +90,13 @@ class Speaker:
 
     async def stream_to_ws(self, websocket, text: str) -> None:
         """
-        Stream raw PCM dari Piper langsung ke WebSocket — persis seperti Libo.
+        Stream raw PCM dari Piper langsung ke WebSocket.
 
         Protocol:
           → send_json {"type": "audio_stream_start"}
           → send_bytes <pcm_chunk> × N
           → send_bytes <silence_padding>
           → send_json {"type": "audio_stream_end"}
-
-        Client harus siap terima bytes (bukan base64).
-        Prebuffer 3 chunk sebelum mulai stream agar tidak ada glitch di awal.
         """
         if not text.strip():
             return
@@ -156,7 +147,7 @@ class Speaker:
                     await websocket.send_bytes(chunk)
                     chunk_count += 1
 
-            # ── Silence padding — kata terakhir tidak terpotong ──────────
+            # Silence padding — kata terakhir tidak terpotong
             silence_frames = int(PIPER_SAMPLE_RATE * SILENCE_PADDING_MS / 1000)
             silence_bytes  = b'\x00' * (silence_frames * PIPER_CHANNELS * PIPER_SAMPLE_WIDTH)
             for i in range(0, len(silence_bytes), CHUNK_BYTES):
@@ -171,10 +162,6 @@ class Speaker:
             )
 
     async def ucapkan_laptop_async(self, text: str) -> None:
-        """
-        Putar TTS di speaker laptop via Piper → pw-play.
-        Dipakai untuk output proaktif Otto (bukan lewat iPhone).
-        """
         if not text.strip():
             return
 
@@ -220,6 +207,19 @@ class Speaker:
 
     # ── Internal ──────────────────────────────────────────────────────────────
 
+    def _gc_procs(self) -> None:
+        """
+        FIX BUG #4: buang proses yang sudah selesai dari _active_procs.
+        Dipanggil sebelum spawn proses baru — bukan hanya setelah wait().
+        Sebelumnya GC hanya terjadi setelah proc.wait() di _play_bytes_local,
+        sehingga proses lama yang sudah exit tapi belum di-wait tetap menumpuk.
+        """
+        before = len(self._active_procs)
+        self._active_procs = [p for p in self._active_procs if p.poll() is None]
+        cleaned = before - len(self._active_procs)
+        if cleaned:
+            logger.debug("[speaker] GC: %d proses lama dibersihkan.", cleaned)
+
     def _generate(self, text: str):
         """Kokoro → (samples: np.ndarray, sample_rate: int)."""
         try:
@@ -252,7 +252,8 @@ class Speaker:
             )
             self._active_procs.append(proc)
             proc.wait()
-            self._active_procs = [p for p in self._active_procs if p.poll() is None]
+            # GC setelah wait — tangkap proses yang baru saja selesai
+            self._gc_procs()
         except Exception as e:
             logger.error("Gagal putar audio lokal: %s", e)
         finally:
