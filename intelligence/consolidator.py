@@ -217,7 +217,7 @@ class Consolidator:
 
     async def _extract_facts_from_llm(self, conversation_text: str) -> Optional[str]:
         """Kirim percakapan ke Groq, minta ekstraksi fakta dalam JSON."""
-        prompt = _EXTRACTION_PROMPT.format(conversation=conversation_text)
+        prompt = _EXTRACTION_PROMPT.replace("{conversation}", conversation_text)
 
         messages = [
             {"role": "user", "content": prompt}

@@ -6,12 +6,16 @@
 
 import json
 import time
+import logging
 from pathlib import Path
 from typing import Optional
 from collections import deque
 
 from core.config import PATHS, MEMORY
 
+logger = logging.getLogger("otto.core.memory")
+
+SHORT_TERM_PERSIST_PATH = Path("/data/asd/otto-ai/data/short_term_cache.json")
 
 class MemoryManager:
     """
@@ -23,6 +27,7 @@ class MemoryManager:
     def __init__(self):
         self.memory_path: Path = PATHS["memory"]
         self._short_term: deque = deque(maxlen=MEMORY["short_term_limit"])
+        self._load_short_term()
         self._long_term: dict = {}
         self._load_long_term()
         self._temp: dict[str, str] = {}
@@ -70,6 +75,50 @@ class MemoryManager:
     def clear_short_term(self) -> None:
         """Reset percakapan — misal saat sesi baru dimulai."""
         self._short_term.clear()
+
+    def persist_short_term(self, max_messages: int = 20) -> None:
+        """
+        Simpan N pesan terakhir ke disk.
+        Dipanggil saat shutdown agar Otto tidak amnesia total setelah restart.
+        """
+        messages = list(self._short_term)[-max_messages:]
+        try:
+            SHORT_TERM_PERSIST_PATH.parent.mkdir(parents=True, exist_ok=True)
+            SHORT_TERM_PERSIST_PATH.write_text(
+                json.dumps(messages, ensure_ascii=False, indent=2),
+                encoding="utf-8"
+            )
+            logger.info(
+                "[memory] Short-term cache disimpan: %d pesan.", len(messages)
+            )
+        except OSError as e:
+            logger.error("[memory] Gagal simpan short-term cache: %s", e)
+    
+    def _load_short_term(self) -> None:
+        """
+        Muat kembali pesan terakhir dari disk saat startup.
+        Sehingga Otto ingat konteks percakapan sebelum restart.
+        """
+        if not SHORT_TERM_PERSIST_PATH.exists():
+            return
+        try:
+            messages = json.loads(
+                SHORT_TERM_PERSIST_PATH.read_text(encoding="utf-8")
+            )
+            if not isinstance(messages, list):
+                return
+            for msg in messages:
+                if isinstance(msg, dict) and "role" in msg and "content" in msg:
+                    # Pastikan ada timestamp, fallback ke 0 jika tidak ada
+                    if "timestamp" not in msg:
+                        msg["timestamp"] = 0.0
+                    self._short_term.append(msg)
+            logger.info(
+                "[memory] Short-term cache dimuat: %d pesan dari sesi sebelumnya.",
+                len(messages)
+            )
+        except Exception as e:
+            logger.warning("[memory] Gagal load short-term cache: %s", e)
 
     def short_term_count(self) -> int:
         return len(self._short_term)
