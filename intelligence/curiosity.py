@@ -147,6 +147,14 @@ class Curiosity:
         if not self._is_good_time():
             return None, None
 
+        # Sisipkan laporan vocab pending jika ada
+        pending_vocab = get_pending_review()
+        if pending_vocab and question:
+            contoh = pending_vocab[0]
+            if contoh["tipe"] == "alias":
+                vocab_note = f" Oh iya, aku juga tangkap kata '{contoh['salah']}', aku anggap maksudnya '{contoh['benar']}' — bener ga?"
+            question += vocab_note
+
         hypothesis = self._pick_hypothesis()
         if hypothesis is None:
             return None, None
