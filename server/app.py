@@ -92,7 +92,7 @@ async def lifespan(app: FastAPI):
     logger.info("── Otto starting up ──")
 
     transcriber = get_transcriber()
-    logger.info("✓ Transcriber siap (dual-mode: tiny/medium)")
+    logger.info("✓ Transcriber siap (small)")
 
     speaker = Speaker()
     logger.info("✓ Speaker siap (Kokoro + Piper streaming)")
@@ -196,7 +196,7 @@ async def websocket_endpoint(ws: WebSocket):
 
     await _send_json(ws, "response", "Otto aktif. Hei, apa yang sedang kamu lakukan Rofi?")
     try:
-        await speaker.stream_to_ws(ws, "Otto aktif. Hei, ada yang bisa aku bantu?")
+        await speaker.stream_to_ws(ws, "Otto aktif. Hei, apa yang sedang kamu lakukan Rofi")
     except Exception as e:
         logger.warning("[ws] Stream salam gagal: %s", e)
 
