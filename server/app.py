@@ -256,7 +256,7 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
         await _send_json(ws, "response",
             "Maaf Rofi, tadi aku tidak berhasil mendengar dengan baik. Bisa kamu ulangi?"
         )
-        await websocket.send_json({"type": "timeout", "data": "STT timeout"})
+        await ws.send_json({"type": "timeout", "data": "STT timeout"})
         return
     except asyncio.CancelledError:
         logger.info("[ws] STT dibatalkan (shutdown).")
