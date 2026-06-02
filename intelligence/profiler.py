@@ -228,13 +228,13 @@ class Profiler:
             "siang": (range(10, 14), "siang hari (jam 10–14)"),
             "sore":  (range(14, 18), "sore hari (jam 14–18)"),
             "malam": (range(18, 23), "malam hari (jam 18–23)"),
-            "larut": (range(23, 25), "larut malam"),
+            "larut": (range(23, 24), "larut malam"),
         }
 
         for session, (hour_range, label) in SESSIONS.items():
             count = sum(c for h, c in active_hours if h in hour_range)
             if count >= HOUR_THRESHOLD:
-                conf  = min(count / total, 0.95)
+                conf = min(count / max(total * 0.3, 1), 0.9)
                 claim = f"Rofi sering aktif di {label}"
                 results.append(Hypothesis(
                     category   = "schedule",

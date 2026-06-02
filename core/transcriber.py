@@ -5,7 +5,7 @@
 import io
 import re
 import wave
-import tempfile
+import tempfile as _tempfile
 from pathlib import Path
 
 from faster_whisper import WhisperModel
@@ -64,8 +64,8 @@ class Transcriber:
         """
         Terima WAV bytes → return teks.
         Otomatis pilih model:
-          - durasi <= 3.5 detik → small  (kalimat singkat, latency rendah)
-          - durasi  > 3.5 detik → medium (kalimat panjang, akurasi lebih baik)
+          # durasi <= 8 detik → small  (latency rendah)
+          # durasi  > 8 detik → medium (akurasi lebih baik)
         """
         if not audio:
             return ""
@@ -78,7 +78,9 @@ class Transcriber:
             model = self._medium
             mode  = f"medium ({durasi:.1f}s)"
 
-        tmp = Path(tempfile.mktemp(suffix=".wav"))
+        with _tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+            tmp = Path(f.name)
+            f.write(audio)
         try:
             tmp.write_bytes(audio)
             print(f"[transcriber] Pakai {mode}")
@@ -103,6 +105,7 @@ class Transcriber:
             return ""
         finally:
             tmp.unlink(missing_ok=True)
+
 
     def _normalize_nama(self, teks: str) -> str:
         kata_kata = teks.split()

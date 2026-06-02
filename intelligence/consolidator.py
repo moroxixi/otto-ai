@@ -111,7 +111,7 @@ class Consolidator:
     def __init__(self, memory, groq_call_fn: Callable) -> None:
         self._memory         = memory
         self._call_groq      = groq_call_fn
-        self._is_running     = False   # guard: tidak proses dua kali sekaligus
+        self._lock = asyncio.Lock()
 
         # State persisten
         self._last_consolidated_count: int = 0   # total pesan saat konsolidasi terakhir
@@ -132,27 +132,21 @@ class Consolidator:
         Aman dipanggil setiap saat — ada guard internal.
         """
         # Guard: jangan jalan paralel
-        if self._is_running:
+        if self._lock.locked():
             return
 
-        current_count = self._memory.short_term_count()
+        async with self._lock:
+            current_count = self._memory.short_term_count()
+            if current_count < CONSOLIDATION_THRESHOLD:
+                return
+            new_since_last = current_count - self._last_consolidated_count
+            if new_since_last < MIN_NEW_MESSAGES and self._last_consolidated_count > 0:
+                return
+            try:
+                await self._consolidate()
+            except Exception as e:
+                logger.error("[consolidator] Error: %s", e, exc_info=True)
 
-        # Belum mencapai threshold
-        if current_count < CONSOLIDATION_THRESHOLD:
-            return
-
-        # Belum cukup pesan baru sejak konsolidasi terakhir
-        new_since_last = current_count - self._last_consolidated_count
-        if new_since_last < MIN_NEW_MESSAGES and self._last_consolidated_count > 0:
-            return
-
-        self._is_running = True
-        try:
-            await self._consolidate()
-        except Exception as e:
-            logger.error("[consolidator] Error saat konsolidasi: %s", e, exc_info=True)
-        finally:
-            self._is_running = False
 
     async def force_consolidate(self) -> int:
         """
@@ -160,15 +154,12 @@ class Consolidator:
         Return jumlah fakta yang berhasil disimpan.
         Berguna untuk: sebelum restart, atau debug manual.
         """
-        if self._is_running:
+        if self._lock.locked():
             logger.warning("[consolidator] Sedang berjalan, skip force.")
             return 0
 
-        self._is_running = True
-        try:
+        async with self._lock:
             return await self._consolidate()
-        finally:
-            self._is_running = False
 
     def get_stats(self) -> dict:
         """Statistik konsolidasi untuk monitoring."""

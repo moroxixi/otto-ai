@@ -118,6 +118,7 @@ class Scheduler:
 
         self._last_conversation_at: Optional[datetime] = None
         self._on_question_cb: Optional[Callable] = None
+        self._background_tasks: set[asyncio.Task] = set() 
 
         # Tracking analyze harian
         self._last_analyze_date: Optional[str] = None
@@ -181,6 +182,8 @@ class Scheduler:
         if not self._running:
             return
         self._running = False
+        for t in list(self._background_tasks):   # ← tambah blok ini
+            t.cancel()
         if self._loop_task and not self._loop_task.done():
             self._loop_task.cancel()
             try:
@@ -308,6 +311,7 @@ class Scheduler:
         question, hyp_id = await self._curiosity.try_ask()
 
         if question and hyp_id:
+            self._profiler.increment_asked(hyp_id)
             logger.info("[scheduler] Curiosity siap tanya hipotesis %s.", hyp_id)
             if self._on_question_cb:
                 await self._on_question_cb(question, hyp_id)
@@ -365,6 +369,8 @@ class Scheduler:
         for task in self._tasks:
             if task.name == task_name:
                 asyncio.create_task(task.run(), name=f"otto.scheduler.force.{task_name}")
+                self._background_tasks.add(t)                    # ← tambah
+                t.add_done_callback(self._background_tasks.discard)
                 logger.info("[scheduler] Force run: %s", task_name)
                 return True
         logger.warning("[scheduler] Task tidak ditemukan: %s", task_name)
