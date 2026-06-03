@@ -141,6 +141,7 @@ class Curiosity:
         self._memory = memory
         self._last_asked_at: Optional[datetime] = None
         self._pending_hypothesis_id: Optional[str] = None
+        self._used_templates: dict[str, list[int]] = {}
         self._load_state()
         logger.info(
             "[curiosity] Siap. Last ask: %s",
@@ -276,7 +277,15 @@ class Curiosity:
         evidence = hypothesis.evidence
 
         templates = QUESTION_TEMPLATES.get(category, DEFAULT_TEMPLATES)
-        template  = random.choice(templates)
+        used = self._used_templates.get(category, [])
+        available = [i for i in range(len(templates)) if i not in used]
+        if not available:
+            # Semua sudah dipakai — reset rotasi
+            available = list(range(len(templates)))
+            self._used_templates[category] = []
+        idx = random.choice(available)
+        self._used_templates[category] = used + [idx]
+        template = templates[idx]
 
         # Ekstrak hint dari evidence dan claim
         evidence_hint = self._extract_evidence_hint(evidence)
@@ -417,6 +426,7 @@ class Curiosity:
         state = {
             "last_asked_at": self._last_asked_at.isoformat() if self._last_asked_at else None,
             "pending_hypothesis_id": self._pending_hypothesis_id,
+            "used_templates": self._used_templates,
         }
         try:
             PATHS["curiosity_state"].write_text(json.dumps(state, ensure_ascii=False, indent=2))
@@ -431,6 +441,7 @@ class Curiosity:
             raw   = state.get("last_asked_at")
             self._last_asked_at = datetime.fromisoformat(raw) if raw else None
             self._pending_hypothesis_id = state.get("pending_hypothesis_id")
+            self._used_templates = state.get("used_templates", {})
         except Exception as e:
             logger.warning("[curiosity] Gagal load state: %s", e)
 
