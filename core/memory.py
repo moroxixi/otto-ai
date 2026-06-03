@@ -122,15 +122,60 @@ class MemoryManager:
 
     # ─── LONG TERM ────────────────────────────────────────────────────────────
 
-    def remember(self, key: str, value, source: str = "manual") -> None:
+    def remember(self, key: str, value, source: str = "manual") -> bool:
+        """
+        Simpan fakta ke long-term memory.
+ 
+        Return:
+            True  — fakta berhasil disimpan
+            False — fakta DIBLOK karena mencoba overwrite confirmed fact
+                    dengan value berbeda (proteksi dari LLM hallucination)
+ 
+        Kasus yang ditangani:
+          1. Fakta baru, belum ada → simpan normal
+          2. Fakta ada, belum confirmed → update value + source
+          3. Fakta ada, confirmed, value SAMA → update timestamp, pertahankan confirmed
+          4. Fakta ada, confirmed, value BEDA → BLOK, log warning, return False
+          5. source == "konfirmasi_rofi" → selalu simpan, set confirmed=True
+             (konfirmasi eksplisit dari Rofi selalu menang)
+        """
+        existing = self._long_term.get(key)
+ 
+        # Kasus 5: konfirmasi eksplisit dari Rofi — selalu izinkan
+        if source == "konfirmasi_rofi":
+            self._long_term[key] = {
+                "value":      value,
+                "source":     source,
+                "updated_at": time.time(),
+                "confirmed":  True,
+            }
+            self._long_term_version += 1
+            self._save_long_term()
+            return True
+ 
+        # Kasus 4: fakta sudah confirmed, value berbeda → BLOK
+        if existing and existing.get("confirmed", False):
+            if existing.get("value") != value:
+                logger.warning(
+                    "[memory] BLOCKED overwrite fakta confirmed '%s': "
+                    "tersimpan='%s' vs baru='%s' (source=%s). "
+                    "Gunakan source='konfirmasi_rofi' untuk override eksplisit.",
+                    key, existing["value"], value, source,
+                )
+                return False
+ 
+        # Kasus 3: fakta ada, confirmed, value SAMA → pertahankan confirmed
+        is_confirmed = existing.get("confirmed", False) if existing else False
+ 
         self._long_term[key] = {
             "value":      value,
             "source":     source,
             "updated_at": time.time(),
-            "confirmed":  source == "konfirmasi_rofi",
+            "confirmed":  is_confirmed,
         }
         self._long_term_version += 1
         self._save_long_term()
+        return True
 
     def forget(self, key: str) -> bool:
         if key in self._long_term:

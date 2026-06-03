@@ -388,36 +388,62 @@ class Consolidator:
     # ── Simpan Fakta ──────────────────────────────────────────────────────────
 
     def _save_facts(self, facts: list[dict]) -> int:
-        """Simpan fakta ke long-term memory."""
-        saved = 0
+        """
+        Simpan fakta ke long-term memory.
+ 
+        Perubahan dari versi sebelumnya:
+        - Hapus guard 'confirmed' manual di sini — sudah ditangani memory.remember()
+        - Tangani return False dari memory.remember() → log konflik LLM
+        - Tetap pertahankan guard 'value sama' di sini untuk hemat write disk
+        - Tambah counter blocked_by_confirmed untuk stats
+        """
+        saved               = 0
+        blocked_by_confirmed = 0
+ 
         for fact in facts:
             key        = fact["key"]
             value      = fact["value"]
             source     = fact.get("source", "observasi_percakapan")
             confidence = fact.get("confidence", 0.6)
-
+ 
             # Inject ke profiler sebagai hipotesis jika confidence tinggi
             if confidence > 0.7 and hasattr(self, "_profiler") and self._profiler:
                 self._profiler.inject_hypothesis(fact)
-
-            # Skip jika sudah dikonfirmasi Rofi
+ 
+            # Early skip jika value sama persis — hemat write disk
             existing = self._memory.recall_entry(key)
-            if existing and existing.get("confirmed", False):
-                logger.debug("[consolidator] Skip '%s' — sudah dikonfirmasi.", key)
-                continue
-
-            # Skip jika value sama
             if existing and existing.get("value") == value:
                 logger.debug("[consolidator] Skip '%s' — value sama.", key)
                 continue
-
+ 
             tagged_source = f"{source} (conf={confidence:.0%})"
-            self._memory.remember(key, value, source=tagged_source)
-            logger.info("[consolidator] ✓ Fakta: %s = %s", key, value)
-            saved += 1
-
+ 
+            # remember() akan handle proteksi confirmed sendiri
+            # Return False berarti ada konflik LLM vs fakta confirmed
+            ok = self._memory.remember(key, value, source=tagged_source)
+ 
+            if ok:
+                logger.info("[consolidator] ✓ Fakta: %s = %s", key, value)
+                saved += 1
+            else:
+                # LLM menghasilkan fakta yang bertentangan dengan fakta confirmed
+                # Ini indikasi hallucination — catat untuk monitoring
+                blocked_by_confirmed += 1
+                confirmed_val = existing.get("value", "?") if existing else "?"
+                logger.warning(
+                    "[consolidator] ⚠ Konflik LLM: '%s' → LLM='%s' vs confirmed='%s'. "
+                    "Fakta confirmed dipertahankan.",
+                    key, value, confirmed_val,
+                )
+ 
+        if blocked_by_confirmed > 0:
+            logger.info(
+                "[consolidator] %d fakta diblok (LLM vs confirmed). "
+                "Pertimbangkan review hypotheses.json jika ini sering terjadi.",
+                blocked_by_confirmed,
+            )
+ 
         return saved
-
     # ── Format Percakapan ─────────────────────────────────────────────────────
 
     @staticmethod
