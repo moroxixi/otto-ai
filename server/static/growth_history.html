@@ -584,6 +584,7 @@ function render(data) {
 
     <div class="section-label">Jalur Milestone</div>
     <div class="milestones-line">
+	 <div class="ml-line"></div>
       ${MILESTONES.map(([thresh, name]) => {
         const reached = cumulative_total > thresh;
         const current = cumulative_total >= thresh && (getNextMilestone(cumulative_total)?.[0] ?? Infinity) > thresh;

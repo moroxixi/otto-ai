@@ -414,7 +414,7 @@ let typingDur     = 0;
 //  EMOJI MAP
 // ══════════════════════════════════════════════════════
 const EMOJI_MAP = [
-  { k: ['siap, bos','siap bos','baik bos'],              e: '🫡', l: 'SIAP'      },
+  { k: ['oke, rofi','oke rofi','baik rofi'],              e: '🫡', l: 'SIAP'      },
   { k: ['segera','langsung'],                             e: '⚡', l: 'LANGSUNG'  },
   { k: ['selesai','sudah dilakukan'],                     e: '✅', l: 'SELESAI'   },
   { k: ['maaf','mohon maaf'],                             e: '🫣', l: 'MAAF'      },
@@ -631,7 +631,7 @@ async function putarSemuaPCM() {
 
   typingDur   = totalFrames / SAMPLE_RATE;
   typingStart = audioCtx.currentTime;
-  typingText  = pendingText;
+  typingText  = pendingText|| respEl.textContent || '';
   pendingText = '';
 
   const barEls   = document.querySelectorAll('.bar');
@@ -650,6 +650,7 @@ async function putarSemuaPCM() {
   gain.gain.setTargetAtTime(0, typingStart + typingDur + 0.05, 0.25);
 
   source.onended = () => {
+	if (animId) { cancelAnimationFrame(animId); animId = null; }
     vizBox.classList.remove('talking');
     barEls.forEach(b => b.style.height = '8px');
     btn.classList.remove('speaking', 'busy');
