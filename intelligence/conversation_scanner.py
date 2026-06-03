@@ -77,6 +77,23 @@ _TEMPORAL_DAMPENERS = [
 ]
 
 
+# Kata yang menunjukkan kalimat tentang orang LAIN (bukan Rofi)
+_THIRD_PERSON_MARKERS = [
+    "temenku", "temanku", "sohibku", "kawanku",
+    "kakakku", "adikku", "adek", "kakak",
+    "istri", "suami", "pacar", "bokap", "nyokap",
+    "orang tua", "ortuku", "dia ", "dia,", "dia.",
+    "mereka", "anakku", "ponakan",
+    "temen gue", "temen gw",
+]
+
+# Kata yang mengindikasikan kalimat MEMANG tentang diri sendiri
+_SELF_MARKERS = [
+    "aku", "gue", "gw", "saya", "w ", "w,",
+    "ane", "ana",
+]
+
+
 def _apply_confidence_modifier(text: str, base_confidence: float) -> float:
     """
     Modifikasi confidence berdasarkan konteks temporal dan negasi.
@@ -370,6 +387,52 @@ def _build_rules() -> list[SignalRule]:
     ]
 
 
+
+
+def _is_about_rofi(text: str) -> bool:
+    """
+    Cek apakah kalimat berbicara tentang Rofi sendiri, bukan orang lain.
+
+    Strategi:
+      1. Jika ada _THIRD_PERSON_MARKERS → kemungkinan besar tentang orang lain
+      2. Jika ada _SELF_MARKERS → kemungkinan tentang diri sendiri (Rofi)
+      3. Jika tidak ada keduanya → biarkan lolos (ambiguous, lebih baik false positive
+         daripada miss sinyal nyata)
+
+    Catatan: Ini bukan NLP sempurna — hanya filter kasar untuk kasus paling jelas.
+    Kalimat ambigu ("dia suka kopi tapi aku juga") tetap lolos karena ada self marker.
+    """
+    t = text.lower()
+
+    # Cek third person dulu
+    has_third_person = any(marker in t for marker in _THIRD_PERSON_MARKERS)
+
+    if not has_third_person:
+        return True  # Tidak ada indikasi orang lain → anggap tentang Rofi
+
+    # Ada third person — cek apakah JUGA ada self marker
+    # Kalimat seperti "temenku suka kopi tapi aku nggak" → ada keduanya
+    # Dalam kasus ini, kalimat ambigu — biarkan lolos tapi dengan catatan
+    has_self = any(marker in t for marker in _SELF_MARKERS)
+
+    if has_self:
+        # Ambigu: ada "temen" tapi juga ada "aku"
+        # Cek urutan: siapa yang disebut lebih dulu setelah kata kunci?
+        # Heuristik sederhana: jika third person muncul SEBELUM self marker → tentang orang lain
+        first_third = min(
+            (t.find(m) for m in _THIRD_PERSON_MARKERS if m in t),
+            default=9999,
+        )
+        first_self = min(
+            (t.find(m) for m in _SELF_MARKERS if m in t),
+            default=9999,
+        )
+        # Jika self marker lebih dulu → kalimat dimulai dari perspektif Rofi
+        return first_self <= first_third
+
+    # Ada third person, tidak ada self marker → tentang orang lain
+    return False
+
 # ─────────────────────────── Scanner ─────────────────────────────────────────
 
 class ConversationScanner:
@@ -412,6 +475,13 @@ class ConversationScanner:
 
             match = rule.match(text)
             if not match:
+                continue
+            # Fix 2: Cek apakah kalimat tentang Rofi, bukan orang lain
+            if not _is_about_rofi(text):
+                logger.debug(
+                    "[scanner] Skip rule '%s' — kalimat tentang orang lain: \"%s\"",
+                    rule.id, text[:60],
+                )
                 continue
 
             try:
