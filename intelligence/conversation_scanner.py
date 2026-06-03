@@ -52,6 +52,65 @@ from typing import Optional
 logger = logging.getLogger("otto.intelligence.scanner")
 
 
+
+
+
+
+# ─────────────────────────── Negation Detection ──────────────────────────────
+
+# Kata yang mengindikasikan kalimat berbicara tentang masa lalu / negasi
+_NEGATION_MARKERS = [
+    "dulu", "bukan", "tidak lagi", "sudah tidak", "udah tidak",
+    "pernah", "tapi sekarang", "tapi udah", "tapi sudah",
+    "nggak lagi", "ngga lagi", "ga lagi",
+]
+
+# Kata yang boost confidence — menunjukkan kebiasaan aktif
+_HABIT_BOOSTERS = [
+    "biasanya", "masih", "selalu", "rutin", "tiap", "setiap", "sering",
+]
+
+# Kata yang turunkan confidence — menunjukkan kejadian sesaat
+_TEMPORAL_DAMPENERS = [
+    "kemarin", "tadi", "sekali", "pernah", "waktu itu", "dulu",
+    "satu kali", "kebetulan",
+]
+
+
+def _apply_confidence_modifier(text: str, base_confidence: float) -> float:
+    """
+    Modifikasi confidence berdasarkan konteks temporal dan negasi.
+
+    - Negasi / masa lalu  → kalikan 0.2 (hampir hapus)
+    - Habit booster       → tambah 0.1 (max 0.9)
+    - Temporal dampener   → kurangi 0.15
+
+    Return confidence final (float 0.0–1.0).
+    """
+    t = text.lower()
+    conf = base_confidence
+
+    # Cek negasi dulu — kalau ada, langsung drastis turun
+    for marker in _NEGATION_MARKERS:
+        if marker in t:
+            conf *= 0.2
+            return round(max(0.0, conf), 3)
+
+    # Boost jika kata kebiasaan aktif
+    for booster in _HABIT_BOOSTERS:
+        if booster in t:
+            conf = min(0.9, conf + 0.1)
+            break  # cukup satu boost
+
+    # Dampen jika kata konteks sesaat
+    for dampener in _TEMPORAL_DAMPENERS:
+        if dampener in t:
+            conf = max(0.0, conf - 0.15)
+            break  # cukup satu dampener
+
+    return round(conf, 3)
+
+
 # ─────────────────────────── Model Signal ────────────────────────────────────
 
 @dataclass
@@ -361,12 +420,22 @@ class ConversationScanner:
                 logger.warning("[scanner] claim_fn error di rule '%s': %s", rule.id, e)
                 continue
 
+            final_confidence = _apply_confidence_modifier(text, rule.confidence)
+
+            # Skip jika confidence jatuh terlalu rendah setelah negasi
+            if final_confidence < 0.1:
+                logger.debug(
+                    "[scanner] Skip rule '%s' — confidence terlalu rendah setelah negasi (%.2f)",
+                    rule.id, final_confidence,
+                )
+                continue
+            
             hit = SignalHit(
                 rule_id    = rule.id,
                 category   = rule.category,
                 claim      = claim,
                 evidence   = f"terdeteksi dari percakapan: \"{text[:80].strip()}\"",
-                confidence = rule.confidence,
+                confidence = final_confidence,  # ← pakai yang sudah dimodifikasi
             )
             hits.append(hit)
 
