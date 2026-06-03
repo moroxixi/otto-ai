@@ -108,7 +108,7 @@ class Consolidator:
         asyncio.create_task(consolidator.maybe_consolidate())
     """
 
-    def __init__(self, memory, groq_call_fn: Callable) -> None:
+    def __init__(self, memory, groq_call_fn: Callable, profiler=None) -> None:
         self._memory         = memory
         self._call_groq      = groq_call_fn
         self._profiler  = profiler
