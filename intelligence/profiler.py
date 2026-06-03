@@ -60,38 +60,49 @@ STALE_DAYS = 7
 
 
 # ─────────────────────────── Model Hipotesis ─────────────────────────────────
-
+DECAY_DAYS         = 30    # hipotesis confirmed > 30 hari → mulai decay
+DECAY_RATE         = 0.10  # turun 10% per siklus decay
+MIN_CONFIDENCE     = 0.20  # batas bawah — tidak pernah drop ke nol
+REQUEUE_THRESHOLD  = 0.50  # kalau confidence turun ke sini → antrian ulang
+ 
+ 
 @dataclass
 class Hypothesis:
     """Satu hipotesis tentang Rofi."""
-    id:          str   = field(default_factory=lambda: uuid4().hex[:8])
-    category:    str   = ""       # "habit", "preference", "schedule", "topic"
-    claim:       str   = ""       # kalimat hipotesis: "Rofi suka ngobrol malam"
-    evidence:    str   = ""       # alasan singkat: "aktif 21x antara jam 20-23"
-    confidence:  float = 0.0      # 0.0–1.0 (berapa kuat sinyal)
-    status:      str   = "pending"  # pending | confirmed | rejected | stale
-    created_at:  str   = field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
-    updated_at:  str   = field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
-    asked_count: int   = 0        # berapa kali curiosity sudah tanya ini
-
+    id:             str   = field(default_factory=lambda: __import__('uuid').uuid4().hex[:8])
+    category:       str   = ""
+    claim:          str   = ""
+    evidence:       str   = ""
+    confidence:     float = 0.0
+    status:         str   = "pending"
+    created_at:     str   = field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
+    updated_at:     str   = field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
+    asked_count:    int   = 0
+    # ── BARU (Fase 4) ──────────────────────────────────────────────────────
+    last_confirmed: Optional[str] = None   # ISO timestamp terakhir dikonfirmasi
+ 
     def confirm(self) -> None:
-        self.status     = "confirmed"
-        self.updated_at = datetime.now().isoformat(timespec="seconds")
-
+        self.status         = "confirmed"
+        self.updated_at     = datetime.now().isoformat(timespec="seconds")
+        self.last_confirmed = datetime.now().isoformat(timespec="seconds")  # ← BARU
+ 
     def reject(self) -> None:
         self.status     = "rejected"
         self.updated_at = datetime.now().isoformat(timespec="seconds")
-
+ 
     def mark_stale(self) -> None:
         self.status     = "stale"
         self.updated_at = datetime.now().isoformat(timespec="seconds")
-
+ 
     def to_dict(self) -> dict:
         return asdict(self)
-
+ 
     @staticmethod
     def from_dict(d: dict) -> "Hypothesis":
-        return Hypothesis(**{k: v for k, v in d.items() if k in Hypothesis.__dataclass_fields__})
+        # Kompatibel mundur: last_confirmed boleh tidak ada di JSON lama
+        known = {k: d[k] for k in d if k in Hypothesis.__dataclass_fields__}
+        known.setdefault("last_confirmed", None)
+        return Hypothesis(**known)
 
 
 # ─────────────────────────── Profiler ────────────────────────────────────────
@@ -139,6 +150,8 @@ class Profiler:
         new_hypotheses += self._analyze_schedule(summary)
         new_hypotheses += self._analyze_topics(summary)
         new_hypotheses += self._analyze_activity_level(summary)
+
+        self.apply_confidence_decay()
 
         # Tandai hipotesis lama yang sudah stale
         self._mark_stale_hypotheses()
@@ -360,6 +373,58 @@ class Profiler:
                     logger.info("[profiler] Hipotesis %s jadi stale: %s", h.id, h.claim)
             except ValueError:
                 pass
+
+    def apply_confidence_decay(self) -> list[str]:
+        """
+        Turunkan confidence hipotesis confirmed yang sudah lama tidak diverifikasi.
+ 
+        Logika:
+          - Hipotesis confirmed + last_confirmed > DECAY_DAYS hari lalu
+            → confidence dikurangi DECAY_RATE (10%)
+          - Jika confidence turun ke bawah REQUEUE_THRESHOLD (0.5)
+            → status kembali ke "pending" (masuk antrian pertanyaan ulang)
+          - Tidak pernah turun di bawah MIN_CONFIDENCE (0.2)
+ 
+        Return: list claim hipotesis yang di-requeue (untuk logging).
+        """
+        cutoff   = datetime.now() - timedelta(days=DECAY_DAYS)
+        requeued = []
+ 
+        for h in self._hypotheses:
+            if h.status != "confirmed":
+                continue
+ 
+            # Tentukan titik referensi waktu
+            ref_str = h.last_confirmed or h.updated_at
+            try:
+                ref_dt = datetime.fromisoformat(ref_str)
+            except (ValueError, TypeError):
+                continue
+ 
+            if ref_dt >= cutoff:
+                continue  # masih segar, lewati
+ 
+            # Terapkan decay
+            sebelum = h.confidence
+            h.confidence = round(max(MIN_CONFIDENCE, h.confidence - DECAY_RATE), 3)
+            h.updated_at = datetime.now().isoformat(timespec="seconds")
+ 
+            logger.info(
+                "[profiler] decay: %s | %.0f%% → %.0f%%",
+                h.claim, sebelum * 100, h.confidence * 100,
+            )
+ 
+            # Requeue jika confidence sudah terlalu rendah
+            if h.confidence <= REQUEUE_THRESHOLD:
+                h.status      = "pending"
+                h.asked_count = 0   # reset agar curiosity mau tanya lagi
+                requeued.append(h.claim)
+                logger.info("[profiler] requeue: %s", h.claim)
+ 
+        if requeued:
+            self._save()
+ 
+        return requeued
 
     # ── Utils ─────────────────────────────────────────────────────────────────
 
