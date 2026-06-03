@@ -29,6 +29,7 @@ from otto_self.model import self_summary_text, load_personality, after_interacti
 from intelligence.conversation_scanner import ConversationScanner
 from intelligence.consolidator import init_consolidator
 from core.vocabulary import tambah_alias, tambah_istilah
+from intelligence.context_triggers import ContextTriggerEngine
 
 logger = logging.getLogger("otto.brain")
 
@@ -86,6 +87,7 @@ class Brain:
 
         self._scanner = ConversationScanner(profiler) if profiler else None
         self._consolidator = init_consolidator(memory, groq_call_fn=self._call_groq)
+        self._context_engine = ContextTriggerEngine(memory)
 
         self._cached_prompt: str = ""
         self._cached_prompt_version: int = -1
@@ -152,6 +154,7 @@ class Brain:
         asyncio.create_task(self._consolidator.maybe_consolidate())
         asyncio.create_task(self._evolve_personality("normal", user_text=user_text))
         asyncio.create_task(self._scan_for_vocab(user_text))
+        asyncio.create_task(self.check_context_triggers(user_text, text))
         return resp
 
     async def think_stream(
@@ -196,6 +199,7 @@ class Brain:
         asyncio.create_task(self._scan_conversation(user_text, "".join(full_text)))
         asyncio.create_task(self._consolidator.maybe_consolidate())
         asyncio.create_task(self._evolve_personality("normal", user_text=user_text))
+        asyncio.create_task(self.check_context_triggers(user_text, "".join(full_text)))
 
     async def close(self) -> None:
         await self._client.aclose()
@@ -354,6 +358,26 @@ class Brain:
             if kata not in known:
                 # Simpan sebagai istilah baru, tunggu konfirmasi Rofi
                 tambah_istilah(kata, sumber="otto")
+
+    async def check_context_triggers(self, user_text: str, otto_text: str) -> None:
+        """
+        Analisis konteks percakapan → set trigger follow-up jika ada pola.
+        Dipanggil sebagai asyncio.create_task setelah setiap think().
+        """
+        try:
+            new_triggers = await self._context_engine.process(user_text, otto_text)
+            if new_triggers:
+                logger.info(
+                    "[brain] %d context trigger baru: %s",
+                    len(new_triggers),
+                    [t.trigger_type for t in new_triggers],
+                )
+        except Exception as e:
+            logger.warning("[brain] check_context_triggers error (non-fatal): %s", e)
+   
+    def get_context_engine(self) -> "ContextTriggerEngine":
+        """Expose engine agar app.py bisa polling due triggers."""
+        return self._context_engine
 
 
 # ─────────────────────────── Quick Test ─────────────────────────────────────

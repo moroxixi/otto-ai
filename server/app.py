@@ -194,6 +194,27 @@ async def growth_page():
     return {"error": "growth_history.html belum ada di server/static/"}
 
 
+@app.get("/triggers")
+async def triggers_debug():
+    """Debug endpoint: lihat context triggers aktif."""
+    if brain is None:
+        return {"error": "Brain belum siap"}
+    engine = brain.get_context_engine()
+    return {
+        "summary": engine.summary(),
+        "active": [
+            {
+                "id":          t.id,
+                "type":        t.trigger_type,
+                "followup":    t.followup_message,
+                "due_in_min":  round((t.due_at - __import__("time").time()) / 60, 1),
+                "original":    t.original_text[:60],
+            }
+            for t in engine.get_active_triggers()
+        ],
+    }
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     global active_ws
@@ -358,6 +379,19 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
 
     if tracker:
         tracker.record_interaction(text_length=len(text))
+
+    context_engine = brain.get_context_engine()
+    due_triggers = context_engine.get_due_triggers()
+    if due_triggers and not pending_state.get():
+        # Ambil trigger paling lama dulu (FIFO), skip sisanya
+        trigger = due_triggers[0]
+        context_engine.mark_done(trigger.id)
+        # Selipkan ke reply sebelum dikirim ke Rofi
+        reply = resp.text + f"\n\nOh iya — {trigger.followup_message}"
+        logger.info(
+            "[app] Context trigger due: [%s] %s",
+            trigger.trigger_type, trigger.followup_message[:60],
+        )
 
     injected_hyp_id = None
     if curiosity and not pending_state.get():
