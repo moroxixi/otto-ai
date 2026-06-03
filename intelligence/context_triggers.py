@@ -37,7 +37,7 @@ Cara integrasi (dari brain.py):
 """
 
 from __future__ import annotations
-
+import random
 import asyncio
 import json
 import logging
@@ -353,49 +353,58 @@ class ContextTriggerEngine:
             return None
 
         # Deteksi emosi negatif
-        neg_found = [kw for kw in _NEGATIVE_EMOTION if kw in text_lower]
-        if neg_found:
-            emotion_word = neg_found[0]
-            # Follow-up 30 menit kemudian — beri ruang dulu, baru tanya
-            due_at = time.time() + (30 * 60)
-            followup = f"Rofi, tadi kamu bilang {emotion_word}. Sekarang gimana, udah断an断 断断断断断断断断?"
-            # Buat kalimat lebih natural
-            followup = self._natural_emotion_followup(emotion_word, valence="negative")
-
-            return ContextTrigger(
-                trigger_type     = "emotion",
-                original_text    = text[:100],
-                followup_message = followup,
-                due_at           = due_at,
-                context          = {"emotion": emotion_word, "valence": "negative"},
+        def _detect_emotion(self, text: str) -> Optional[ContextTrigger]:
+            """
+            Deteksi sinyal emosi dari teks Rofi.
+            Buat follow-up ringan + catat ke memory.
+         
+            Tidak buat trigger duplikat jika trigger emosi sudah aktif.
+            """
+            text_lower = text.lower()
+         
+            # Cek apakah sudah ada trigger emosi aktif
+            has_active_emotion = any(
+                t.trigger_type == "emotion" and t.status == "active"
+                for t in self._triggers
             )
-
-        # Deteksi emosi positif — follow-up lebih cepat (5 menit), nada ikut senang
-        pos_found = [kw for kw in _POSITIVE_EMOTION if kw in text_lower]
-        if pos_found:
-            emotion_word = pos_found[0]
-            due_at = time.time() + (5 * 60)
-            followup = self._natural_emotion_followup(emotion_word, valence="positive")
-
-            return ContextTrigger(
-                trigger_type     = "emotion",
-                original_text    = text[:100],
-                followup_message = followup,
-                due_at           = due_at,
-                context          = {"emotion": emotion_word, "valence": "positive"},
-            )
-
-        return None
+            if has_active_emotion:
+                return None
+         
+            # Deteksi emosi negatif
+            neg_found = [kw for kw in _NEGATIVE_EMOTION if kw in text_lower]
+            if neg_found:
+                emotion_word = neg_found[0]
+                due_at   = time.time() + (30 * 60)
+                followup = self._natural_emotion_followup(emotion_word, valence="negative")
+         
+                return ContextTrigger(
+                    trigger_type     = "emotion",
+                    original_text    = text[:100],
+                    followup_message = followup,
+                    due_at           = due_at,
+                    context          = {"emotion": emotion_word, "valence": "negative"},
+                )
+         
+            # Deteksi emosi positif — follow-up lebih cepat (5 menit), nada ikut senang
+            pos_found = [kw for kw in _POSITIVE_EMOTION if kw in text_lower]
+            if pos_found:
+                emotion_word = pos_found[0]
+                due_at   = time.time() + (5 * 60)
+                followup = self._natural_emotion_followup(emotion_word, valence="positive")
+         
+                return ContextTrigger(
+                    trigger_type     = "emotion",
+                    original_text    = text[:100],
+                    followup_message = followup,
+                    due_at           = due_at,
+                    context          = {"emotion": emotion_word, "valence": "positive"},
+                )
+         
+            return None
 
     def _natural_emotion_followup(self, emotion_word: str, valence: str) -> str:
         """Buat kalimat follow-up yang terasa natural, bukan kaku."""
         if valence == "negative":
-            templates = [
-                f"Eh Rofi, masih {emotion_word}? Mau cerita nggak?",
-                f"Gimana sekarang, masih {emotion_word}?",
-                f"Rofi, tadi bilang {emotion_word} — udah断an断 belum?",
-            ]
-            # Versi lebih bersih (tanpa karakter rusak dari bug di atas)
             templates = [
                 f"Eh Rofi, masih {emotion_word}? Mau cerita nggak?",
                 f"Gimana sekarang, masih ngerasa {emotion_word}?",
@@ -407,11 +416,9 @@ class ContextTriggerEngine:
                 f"Wah, ada kabar baik nih kayaknya? Tadi kamu kedengeran {emotion_word}.",
                 f"Rofi kelihatan {emotion_word} tadi — ada yang mau diceritain?",
             ]
-
-        import random
+ 
         return random.choice(templates)
-
-    # ── Deteksi: Intent ───────────────────────────────────────────────────────
+     # ── Deteksi: Intent ───────────────────────────────────────────────────────
 
     def _detect_intent(self, text: str) -> Optional[ContextTrigger]:
         """
