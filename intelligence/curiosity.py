@@ -52,8 +52,6 @@ logger = logging.getLogger("otto.intelligence.curiosity")
 
 # ──────────────────────────── Konfigurasi ────────────────────────────────────
 
-STATE_FILE = Path("/data/asd/otto-ai/data/curiosity_state.json")
-
 # Jeda minimum antar pertanyaan (dalam menit) — agar tidak terasa menginterogasi
 MIN_GAP_MINUTES = 90
 
@@ -62,6 +60,8 @@ MAX_ASKED_COUNT = 2
 
 # Waktu "aman" untuk bertanya (jam lokal) — Otto tidak tanya pas Rofi sibuk
 SAFE_HOURS = list(range(8, 12)) + list(range(14, 17)) + list(range(19, 22))
+
+_personality_cache: dict = {"data": None, "mtime": 0.0}
 
 
 # ──────────────────────────── Template Pertanyaan ────────────────────────────
@@ -96,8 +96,6 @@ DEFAULT_TEMPLATES = [
     "Aku penasaran soal sesuatu. {claim_short}. Itu tepat nggak?",
 ]
 
-
-_personality_cache: dict = {"data": None, "mtime": 0.0}
 
 def _get_min_confidence() -> float:
     """
@@ -415,21 +413,21 @@ class Curiosity:
     # ── Persistensi State ─────────────────────────────────────────────────────
 
     def _save_state(self) -> None:
-        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        PATHS["curiosity_state"].parent.mkdir(parents=True, exist_ok=True)
         state = {
             "last_asked_at": self._last_asked_at.isoformat() if self._last_asked_at else None,
             "pending_hypothesis_id": self._pending_hypothesis_id,
         }
         try:
-            STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2))
+            PATHS["curiosity_state"].write_text(json.dumps(state, ensure_ascii=False, indent=2))
         except OSError as e:
             logger.error("[curiosity] Gagal simpan state: %s", e)
 
     def _load_state(self) -> None:
-        if not STATE_FILE.exists():
+        if not PATHS["curiosity_state"].exists():
             return
         try:
-            state = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+            state = json.loads(PATHS["curiosity_state"].read_text(encoding="utf-8"))
             raw   = state.get("last_asked_at")
             self._last_asked_at = datetime.fromisoformat(raw) if raw else None
             self._pending_hypothesis_id = state.get("pending_hypothesis_id")
@@ -506,8 +504,8 @@ if __name__ == "__main__":
 
     async def _test():
         # Override path untuk test
-        global STATE_FILE
-        STATE_FILE = Path("/tmp/otto_curiosity_state.json")
+        
+        PATHS["curiosity_state"] = Path("/tmp/otto_curiosity_state.json")
 
         profiler  = MockProfiler()
         curiosity = Curiosity(profiler)
