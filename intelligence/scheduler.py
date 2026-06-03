@@ -42,6 +42,7 @@ INTERVALS = {
     "curiosity_check":  30 * 60,    # 30 menit — guard: hanya jika profiler sudah jalan
     "self_check":       6  * 3600,  # 6 jam    — cek kesehatan sistem
     "growth_daily":     24 * 3600,  # 24 jam   — update riwayat pertumbuhan
+    "context_trigger_check": 60,
 }
 
 TICK_SECONDS = 60
@@ -111,6 +112,8 @@ class Scheduler:
         self._profiler         = profiler
         self._curiosity        = curiosity
         self._memory           = memory  
+        self._context_engine   = context_engine   # ← BARU
+        self._speaker          = speaker  
 
         self._running          = False
         self._loop_task: Optional[asyncio.Task] = None
@@ -158,6 +161,12 @@ class Scheduler:
                 name         = "growth_daily",
                 interval     = INTERVALS["growth_daily"],
                 fn           = self._task_growth_daily,
+                run_at_start = False,
+            ),
+            ScheduledTask(
+                name         = "context_trigger_check",
+                interval     = INTERVALS["context_trigger_check"],
+                fn           = self._task_context_trigger_check,
                 run_at_start = False,
             ),
         ]
@@ -352,6 +361,38 @@ class Scheduler:
         except Exception as e:
             logger.error("[scheduler] growth_daily error: %s", e)
 
+
+
+    async def _task_context_trigger_check(self) -> None:
+        """
+        Polling context triggers yang sudah due → ucapkan lewat speaker laptop.
+        Jalan setiap 60 detik, tidak butuh HP terhubung.
+        
+        Filosofi: trigger dibuat saat Rofi ngobrol, tapi disampaikan
+        secara mandiri oleh Otto — seperti asisten yang ingat sendiri.
+        """
+        if self._context_engine is None or self._speaker is None:
+            return
+
+        due = self._context_engine.get_due_triggers()
+        if not due:
+            return
+
+        # Ambil satu per satu — jangan spam kalau ada banyak
+        trigger = due[0]
+        self._context_engine.mark_done(trigger.id)
+
+        msg = trigger.followup_message
+        logger.info(
+            "[scheduler] Context trigger due [%s] → ucap laptop: %s",
+            trigger.trigger_type, msg[:60],
+        )
+
+        try:
+            await self._speaker.ucapkan_laptop_async(msg)
+        except Exception as e:
+            logger.error("[scheduler] Gagal ucap trigger via laptop: %s", e)
+
     # ── Utilitas ──────────────────────────────────────────────────────────────
 
     def get_stats(self) -> dict:
@@ -394,9 +435,15 @@ def get_scheduler() -> Scheduler:
         )
     return _scheduler_instance
 
-def init_scheduler(activity_watcher, profiler, curiosity, memory=None) -> Scheduler:
+def init_scheduler(activity_watcher, profiler, curiosity, memory=None,
+                   context_engine=None, speaker=None) -> Scheduler:
     global _scheduler_instance
-    _scheduler_instance = Scheduler(activity_watcher, profiler, curiosity, memory=memory)
+    _scheduler_instance = Scheduler(
+        activity_watcher, profiler, curiosity,
+        memory=memory,
+        context_engine=context_engine,   # ← BARU
+        speaker=speaker,                 # ← BARU
+    )
     return _scheduler_instance
 
 

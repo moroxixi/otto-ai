@@ -169,6 +169,11 @@ class ContextTriggerEngine:
         """
         new_triggers: list[ContextTrigger] = []
 
+        # Expire dulu — HARUS sebelum active_count dan semua guard deduplication
+        # Bug sebelumnya: active_count dihitung sebelum expire, trigger lama
+        # yang sudah expired ikut diblokir pembuatan trigger baru
+        self._expire_old_triggers()
+
         # Jangan buat lebih dari MAX_ACTIVE_TRIGGERS
         active_count = len(self.get_active_triggers())
         if active_count >= MAX_ACTIVE_TRIGGERS:
@@ -177,9 +182,6 @@ class ContextTriggerEngine:
                 active_count, MAX_ACTIVE_TRIGGERS,
             )
             return []
-
-        # Expire dulu trigger lama
-        self._expire_old_triggers()
 
         # 1. Deteksi time_mention
         time_trigger = self._detect_time_mention(user_text)

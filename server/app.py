@@ -98,14 +98,20 @@ async def lifespan(app: FastAPI):
     speaker = Speaker()
     logger.info("✓ Speaker siap (Kokoro + Piper streaming)")
 
+    brain = Brain(memory, profiler=profiler)
+    logger.info("✓ Brain siap")
+
     watcher   = init_watcher()
     profiler  = init_profiler(watcher)
     curiosity = init_curiosity(profiler, memory)
-    scheduler = init_scheduler(watcher, profiler, curiosity, memory=memory)
+    scheduler = init_scheduler(
+    watcher, profiler, curiosity,
+    memory         = memory,
+    context_engine = brain.get_context_engine(),   # ← BARU
+    speaker        = speaker,                       # ← BARU
+    )
     tracker   = init_tracker()
 
-    brain = Brain(memory, profiler=profiler)
-    logger.info("✓ Brain siap")
     # Konsolidasikan short-term cache dari sesi sebelumnya ke long-term
     # Ini penting: tanpa ini Otto "amnesia" tiap restart meski cache ada
     if memory.short_term_count() > 0:
