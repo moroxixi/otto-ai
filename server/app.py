@@ -244,6 +244,9 @@ async def websocket_endpoint(ws: WebSocket):
     except Exception as e:
         logger.warning("[ws] Stream salam gagal: %s", e)
 
+    # SESUDAH (PATCH):
+    _is_processing = False  # flag rate limiting per-koneksi
+
     try:
         while True:
             try:
@@ -255,10 +258,22 @@ async def websocket_endpoint(ws: WebSocket):
 
             if msg_type == "ping":
                 await ws.send_json({"type": "pong"})
-            elif msg_type == "audio":
-                await _handle_audio(ws, raw)
-            elif msg_type == "text":
-                await _handle_text(ws, raw.get("data", "").strip())
+            elif msg_type in ("audio", "text"):
+                # FIX: Rate limiting — drop request jika masih processing
+                if _is_processing:
+                    logger.warning(
+                        "[ws] Request '%s' diabaikan — brain masih memproses.", msg_type
+                    )
+                    await _send_json(ws, "status", "Tunggu sebentar, aku masih berpikir...")
+                    continue
+                _is_processing = True
+                try:
+                    if msg_type == "audio":
+                        await _handle_audio(ws, raw)
+                    else:
+                        await _handle_text(ws, raw.get("data", "").strip())
+                finally:
+                    _is_processing = False  # selalu reset meski error
             else:
                 logger.warning("[ws] Tipe pesan tidak dikenal: %s", msg_type)
                 await _send_error(ws, f"Tipe pesan '{msg_type}' tidak dikenal.")
