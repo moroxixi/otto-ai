@@ -20,6 +20,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any
+import random
 
 import httpx
 
@@ -64,6 +65,12 @@ Profil Rofi (dari observasi + konfirmasi sebelumnya):
 
 _NO_PROFILE = "Kamu belum punya profil Rofi. Amati dan bangun perlahan dari percakapan ini."
 
+_DEGRADED_RESPONSES = [
+    "Maaf Rofi, aku lagi overloaded sekarang. Coba lagi dalam beberapa menit ya.",
+    "Koneksi ke otakku lagi penuh nih. Tunggu sebentar ya, Rofi.",
+    "Aku lagi kelebihan beban sekarang. Coba tanya lagi dalam 2-3 menit.",
+]
+_DEGRADED_SENTINEL = {"_degraded": True}
 
 @dataclass
 class BrainResponse:
@@ -124,38 +131,59 @@ class Brain:
         user_text: str,
         history: list[dict] | None = None,
     ) -> BrainResponse:
-        system_prompt = self._build_system_prompt()
-        messages      = self._build_messages(system_prompt, history or [], user_text)
+        try:
+            system_prompt = self._build_system_prompt()
+            messages      = self._build_messages(system_prompt, history or [], user_text)
+     
+            t0      = time.monotonic()
+            raw     = await self._call_groq(messages)
+            latency = (time.monotonic() - t0) * 1000
+     
+            # Handle degraded mode — semua key down
+            if raw is _DEGRADED_SENTINEL:
+                degraded_text = random.choice(_DEGRADED_RESPONSES)
+                return BrainResponse(
+                    text      = degraded_text,
+                    model     = "degraded",
+                    key_index = -1,
+                    latency_ms = round(latency, 1),
+                )
+     
+            text  = self._extract_text(raw)
+            usage = raw.get("usage", {})
+     
+            resp = BrainResponse(
+                text              = text,
+                model             = MODEL,
+                key_index         = self._key_idx,
+                prompt_tokens     = usage.get("prompt_tokens", 0),
+                completion_tokens = usage.get("completion_tokens", 0),
+                latency_ms        = round(latency, 1),
+                raw               = raw,
+            )
+     
+            logger.debug(
+                "[brain] key=%d tokens=%d+%d latency=%.0fms",
+                self._key_idx, resp.prompt_tokens, resp.completion_tokens, latency,
+            )
+            logger.info("[brain] LLM response diterima: %.60s...", text)
+            asyncio.create_task(self._log_to_memory(user_text, text))
+            asyncio.create_task(self._scan_conversation(user_text, text))
+            asyncio.create_task(self._consolidator.maybe_consolidate())
+            asyncio.create_task(self._evolve_personality("normal", user_text=user_text))
+            asyncio.create_task(self._scan_for_vocab(user_text))
+            asyncio.create_task(self.check_context_triggers(user_text, text))
+            return resp
+     
+        except Exception as e:
+            # Safety net — seharusnya tidak pernah sampai sini setelah patch _call_groq
+            logger.critical("[brain] think() uncaught exception: %s", e, exc_info=True)
+            return BrainResponse(
+                text      = random.choice(_DEGRADED_RESPONSES),
+                model     = "error",
+                key_index = -1,
+            )
 
-        t0      = time.monotonic()
-        raw     = await self._call_groq(messages)
-        latency = (time.monotonic() - t0) * 1000
-
-        text  = self._extract_text(raw)
-        usage = raw.get("usage", {})
-
-        resp = BrainResponse(
-            text              = text,
-            model             = MODEL,
-            key_index         = self._key_idx,
-            prompt_tokens     = usage.get("prompt_tokens", 0),
-            completion_tokens = usage.get("completion_tokens", 0),
-            latency_ms        = round(latency, 1),
-            raw               = raw,
-        )
-
-        logger.debug(
-            "[brain] key=%d tokens=%d+%d latency=%.0fms",
-            self._key_idx, resp.prompt_tokens, resp.completion_tokens, latency,
-        )
-        logger.info("[brain] LLM response diterima: %.60s...", text)
-        asyncio.create_task(self._log_to_memory(user_text, text))
-        asyncio.create_task(self._scan_conversation(user_text, text))
-        asyncio.create_task(self._consolidator.maybe_consolidate())
-        asyncio.create_task(self._evolve_personality("normal", user_text=user_text))
-        asyncio.create_task(self._scan_for_vocab(user_text))
-        asyncio.create_task(self.check_context_triggers(user_text, text))
-        return resp
 
     async def think_stream(
         self,
@@ -165,41 +193,52 @@ class Brain:
         system_prompt = self._build_system_prompt()
         messages      = self._build_messages(system_prompt, history or [], user_text)
 
+        probe = await self._call_groq(messages)
+        if probe is _DEGRADED_SENTINEL:
+            yield random.choice(_DEGRADED_RESPONSES)
+            return
+        api_key = self._keys[(self._key_idx - 1) % len(self._keys)]
         payload = {
             "model":    MODEL,
             "messages": messages,
             "stream":   True,
         }
-
-        api_key = self._next_key()
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type":  "application/json",
         }
-
+     
         full_text = []
-        async with self._client.stream("POST", GROQ_URL, json=payload, headers=headers) as r:
-            r.raise_for_status()
-            async for line in r.aiter_lines():
-                if not line.startswith("data: "):
-                    continue
-                data = line[6:]
-                if data.strip() == "[DONE]":
-                    break
-                try:
-                    chunk = json.loads(data)
-                    token = chunk["choices"][0]["delta"].get("content", "")
-                    if token:
-                        full_text.append(token)
-                        yield token
-                except (json.JSONDecodeError, KeyError):
-                    continue
-
-        asyncio.create_task(self._log_to_memory(user_text, "".join(full_text)))
-        asyncio.create_task(self._scan_conversation(user_text, "".join(full_text)))
+        try:
+            async with self._client.stream("POST", GROQ_URL, json=payload, headers=headers) as r:
+                r.raise_for_status()
+                async for line in r.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    data = line[6:]
+                    if data.strip() == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data)
+                        token = chunk["choices"][0]["delta"].get("content", "")
+                        if token:
+                            full_text.append(token)
+                            yield token
+                    except (json.JSONDecodeError, KeyError):
+                        continue
+        except Exception as e:
+            logger.error("[brain] think_stream error mid-stream: %s", e)
+            fallback = random.choice(_DEGRADED_RESPONSES)
+            yield fallback
+            full_text = [fallback]
+     
+        combined = "".join(full_text)
+        asyncio.create_task(self._log_to_memory(user_text, combined))
+        asyncio.create_task(self._scan_conversation(user_text, combined))
         asyncio.create_task(self._consolidator.maybe_consolidate())
         asyncio.create_task(self._evolve_personality("normal", user_text=user_text))
-        asyncio.create_task(self.check_context_triggers(user_text, "".join(full_text)))
+        asyncio.create_task(self.check_context_triggers(user_text, combined))
+
 
     async def close(self) -> None:
         await self._client.aclose()
@@ -249,17 +288,19 @@ class Brain:
 
     async def _call_groq(self, messages, retries=3, model=None) -> dict:
         """
-        FIX BUG 4: retry loop sebelumnya bisa berjalan retries * len(keys) kali
-        bahkan setelah semua key dicoba dan semua rate-limit.
-        Sekarang: jika satu putaran penuh semua key kena 429 → langsung raise,
-        tidak loop terus. Ini mencegah request menggantung terlalu lama.
+        Kirim request ke Groq. Round-robin semua key.
+ 
+        Return:
+            dict  — respons normal dari Groq API
+            _DEGRADED_SENTINEL  — semua key down, caller harus handle degraded mode
+ 
+        Tidak pernah raise — semua error ditangani di dalam.
         """
         last_exc: Exception | None = None
         _model = model or MODEL
         n_keys = len(self._keys)
-
+ 
         for attempt in range(retries):
-            # Satu attempt = coba semua key sekali (round-robin)
             rate_limited_count = 0
             for _ in range(n_keys):
                 api_key = self._next_key()
@@ -273,7 +314,7 @@ class Brain:
                     "temperature": 0.7,
                     "max_tokens":  1024,
                 }
-
+ 
                 try:
                     resp = await self._client.post(GROQ_URL, json=payload, headers=headers)
                     if resp.status_code == 429:
@@ -288,13 +329,13 @@ class Brain:
                         continue
                     resp.raise_for_status()
                     return resp.json()
-
+ 
                 except httpx.TimeoutException as e:
                     logger.warning("[brain] Timeout attempt %d: %s", attempt + 1, e)
                     last_exc = e
                     await asyncio.sleep(0.5 * (attempt + 1))
-                    break  # timeout → coba attempt berikutnya (bukan key berikutnya)
-
+                    break
+ 
                 except httpx.HTTPStatusError as e:
                     if e.response.status_code >= 500:
                         logger.warning("[brain] Server error attempt %d: %s", attempt + 1, e)
@@ -302,17 +343,30 @@ class Brain:
                         await asyncio.sleep(1.0)
                         break
                     else:
-                        raise
-
-            # Semua key kena 429 di attempt ini → tunggu sebentar sebelum retry
+                        # 4xx selain 429 — tidak retry, tidak crash
+                        logger.error("[brain] HTTP %d error: %s", e.response.status_code, e)
+                        last_exc = e
+                        break
+ 
+                except Exception as e:
+                    logger.error("[brain] Unexpected error: %s", e, exc_info=True)
+                    last_exc = e
+                    break
+ 
             if rate_limited_count == n_keys:
                 logger.warning(
                     "[brain] Semua %d key rate-limited (attempt %d/%d), tunggu 5s…",
                     n_keys, attempt + 1, retries
                 )
                 await asyncio.sleep(5.0)
-
-        raise RuntimeError(f"Groq gagal setelah {retries} attempt: {last_exc}") from last_exc
+ 
+        # Semua attempt habis — masuk degraded mode, JANGAN crash
+        logger.error(
+            "[brain] ⚠ DEGRADED MODE — semua %d key gagal setelah %d attempt. "
+            "Last error: %s",
+            n_keys, retries, last_exc
+        )
+        return _DEGRADED_SENTINEL
 
     @staticmethod
     def _extract_text(raw: dict) -> str:
