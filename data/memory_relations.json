@@ -1,0 +1,39 @@
+{
+  "jadi_ayah_membuat_rutin": {
+    "id": "jadi_ayah_membuat_rutin",
+    "from_facts": [
+      "rofi.karakter.hasil",
+      "rofi.jadwal.kelahiran"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi baru saja menjadi ayah, kemungkinan akan membuat rutin baru",
+    "implication": "Tanya Rofi tentang kebiasaan baru yang sedang dibuatnya",
+    "confidence": 0.8,
+    "created_at": 1780491379.913155,
+    "confirmed_at": null
+  },
+  "minum_kopi_setiap_pagi": {
+    "id": "minum_kopi_setiap_pagi",
+    "from_facts": [
+      "rofi.preferensi.minuman"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi minum kopi setiap pagi, kemungkinan membutuhkan energi",
+    "implication": "Tanya Rofi tentang rencana hariannya sebelum jam 8 pagi",
+    "confidence": 0.7,
+    "created_at": 1780491379.9152937,
+    "confirmed_at": null
+  },
+  "kebun_binatang_kemungkinan_kegiatan": {
+    "id": "kebun_binatang_kemungkinan_kegiatan",
+    "from_facts": [
+      "rofi.jadwal.kegiatan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi mungkin akan pergi ke kebun binatang, kegiatan yang menyenangkan",
+    "implication": "Tanya Rofi tentang rencana kebun binatangnya dan bantu mengingatnya",
+    "confidence": 0.9,
+    "created_at": 1780491379.9164672,
+    "confirmed_at": null
+  }
+}

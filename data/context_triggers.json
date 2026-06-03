@@ -6,7 +6,7 @@
     "followup_message": "Eh Rofi, masih bingung? Mau cerita nggak?",
     "due_at": 1780462596.686776,
     "created_at": 1780460796.6870825,
-    "status": "active",
+    "status": "done",
     "context": {
       "emotion": "bingung",
       "valence": "negative"

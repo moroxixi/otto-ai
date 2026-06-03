@@ -4,14 +4,14 @@
   "revisit_cooldown_hours": 72,
   "response_depth": 0.5000000000000001,
   "active_layer": 3,
-  "interaction_count": 53,
+  "interaction_count": 54,
   "layer_2_threshold": 10,
   "layer_3_threshold": 50,
   "rofi_communication_style": {
-    "avg_response_length": 231.3,
+    "avg_response_length": 229.8,
     "tends_to_elaborate": true,
-    "correction_rate": 0.143,
+    "correction_rate": 0.125,
     "preferred_question_style": "direct",
-    "sample_count": 7
+    "sample_count": 8
   }
 }
