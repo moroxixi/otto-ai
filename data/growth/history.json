@@ -48,7 +48,7 @@
     ]
   },
   {
-    "week_number": 22,
+    "week_number": 2,
     "year": 2026,
     "start_date": "2026-05-31",
     "end_date": "2026-06-01",
@@ -66,7 +66,7 @@
     "deep_conversations": 3,
     "errors": 0,
     "code_updates": 0,
-    "otto_note": "Minggu ke-22: Lumayan aktif. 0 hari bersama Rofi. 3 percakapan yang cukup dalam.",
+    "otto_note": "Minggu ke-2: Lumayan aktif. 0 hari bersama Rofi. 3 percakapan yang cukup dalam.",
     "events": [
       {
         "type": "active_day",

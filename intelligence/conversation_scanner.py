@@ -523,22 +523,9 @@ class ConversationScanner:
         return hits
 
     def _inject_hits(self, hits: list[SignalHit]) -> None:
-        """
-        Buat Hypothesis dari setiap hit dan inject ke Profiler.
-        Duplikat (claim sama) sudah ditangani oleh Profiler.analyze().
-        Di sini kita perlu cek sendiri agar tidak spam.
-        """
         from intelligence.profiler import Hypothesis
 
-        existing_claims = {h.claim for h in self._profiler.get_all()}
-
         for hit in hits:
-            if hit.claim in existing_claims:
-                logger.debug(
-                    "[scanner] Skip duplikat: '%s'", hit.claim
-                )
-                continue
-
             hyp = Hypothesis(
                 category   = hit.category,
                 claim      = hit.claim,
@@ -547,16 +534,18 @@ class ConversationScanner:
                 status     = "pending",
             )
 
-            # Inject langsung ke list internal profiler + simpan
-            self._profiler._hypotheses.append(hyp)
-            existing_claims.add(hit.claim)
-            self._profiler._save()
+            # Pakai method public — biarkan profiler yang handle duplikat & save
+            injected = self._profiler.inject_hypothesis(hyp)
 
-            logger.info(
-                "[scanner] → inject hipotesis baru [%s] %.0f%%: %s",
-                hyp.category, hyp.confidence * 100, hyp.claim,
-            )
-
+            if injected:
+                logger.info(
+                    "[scanner] → inject hipotesis baru [%s] %.0f%%: %s",
+                    hyp.category, hyp.confidence * 100, hyp.claim,
+                )
+            else:
+                logger.debug(
+                    "[scanner] Skip duplikat (ditangani profiler): '%s'", hit.claim
+                )
 
 # ─────────────────────────── Quick Test ──────────────────────────────────────
 

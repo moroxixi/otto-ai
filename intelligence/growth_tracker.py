@@ -410,12 +410,13 @@ class GrowthTracker:
         self._save_history()
 
         # Mulai minggu baru
-        today       = date.today()
-        year, week  = _week_key(today)
-        cumulative  = self._get_cumulative_total()
+        today      = date.today()
+        year, _    = _week_key(today)          # year masih pakai ISO, hanya week_num yang diganti
+        cumulative = self._get_cumulative_total()
+        week_num   = len(self._history) + 1    # ← minggu ke-N bersama Rofi, bukan ISO week
 
-        self._current = _empty_week(week, year, today.isoformat())
-        self._current["cumulative_total"] = cumulative   # bawa terus
+        self._current = _empty_week(week_num, year, today.isoformat())
+        self._current["cumulative_total"] = cumulative
         self._save_current()
 
         logger.info(
@@ -499,7 +500,14 @@ class GrowthTracker:
                 # Validasi minggu masih sama
                 today      = date.today()
                 year, week = _week_key(today)
-                if data.get("week_number") == week and data.get("year") == year:
+                stored_start = data.get("start_date", "")
+                if stored_start:
+                    stored_date = date.fromisoformat(stored_start)
+                    stored_iso_week = stored_date.isocalendar()[1]
+                    today_iso_week  = date.today().isocalendar()[1]
+                    if stored_iso_week == today_iso_week and data.get("year") == year:
+                        return data
+                elif data.get("year") == year:
                     return data
                 # Minggu berbeda — kunci yang lama dan mulai baru
                 # (edge case: server mati saat pergantian minggu)

@@ -346,17 +346,39 @@ class Brain:
         except Exception as e:
             logger.warning("Gagal log ke memory: %s", e, exc_info=True)
 
+    # ── CARI method _scan_for_vocab (di bagian bawah Brain class):
+    # ── GANTI SELURUH METHOD dengan ini:
     async def _scan_for_vocab(self, teks: str) -> None:
         """
-        Deteksi sederhana: kata kapital yang tidak dikenal
-        kemungkinan nama yang Whisper salah tulis.
+        Deteksi nama/istilah yang mungkin salah tulis Whisper.
+        Filter ketat: abaikan kata di awal kalimat dan stopwords umum.
         """
         import re
-        kata_kapital = re.findall(r'\b[A-Z][a-z]{2,}\b', teks)
-        known = {"Otto", "Rofi"}  # isi dari vocabulary.json nanti
-        for kata in kata_kapital:
-            if kata not in known:
-                # Simpan sebagai istilah baru, tunggu konfirmasi Rofi
+    
+        # Stopwords — kata umum Indonesia yang sering kapital di awal kalimat
+        STOPWORDS = {
+            "Aku", "Saya", "Kamu", "Dia", "Kita", "Mereka", "Kami",
+            "Yang", "Dan", "Tapi", "Atau", "Jadi", "Kalau", "Karena",
+            "Sudah", "Belum", "Akan", "Bisa", "Mau", "Maka", "Juga",
+            "Ini", "Itu", "Ada", "Tidak", "Nggak", "Bukan", "Punya",
+            "Senang", "Bagus", "Baik", "Hei", "Hai", "Oke", "Iya",
+            "Otto", "Rofi",
+        }
+    
+        # Pisah jadi kalimat dulu, lalu ambil kata kapital yang BUKAN di posisi pertama
+        kalimat_list = re.split(r'[.!?]', teks)
+        kandidat = set()
+    
+        for kalimat in kalimat_list:
+            kata_list = kalimat.strip().split()
+            # Skip kata pertama (selalu kapital karena awal kalimat)
+            for kata in kata_list[1:]:
+                # Harus: kapital, minimal 3 huruf, hanya huruf
+                if re.match(r'^[A-Z][a-z]{2,}$', kata):
+                    kandidat.add(kata)
+    
+        for kata in kandidat:
+            if kata not in STOPWORDS:
                 tambah_istilah(kata, sumber="otto")
 
     async def check_context_triggers(self, user_text: str, otto_text: str) -> None:
