@@ -111,6 +111,7 @@ class Consolidator:
     def __init__(self, memory, groq_call_fn: Callable) -> None:
         self._memory         = memory
         self._call_groq      = groq_call_fn
+        self._profiler  = profiler
         self._lock = asyncio.Lock()
 
         # State persisten
@@ -287,6 +288,10 @@ class Consolidator:
             source     = fact.get("source", "observasi_percakapan")
             confidence = fact.get("confidence", 0.6)
 
+            # Jika confidence tinggi → inject ke profiler sebagai hipotesis
+            if confidence > 0.7 and hasattr(self, "_profiler") and self._profiler:
+                self._profiler.inject_hypothesis(fact)
+
             # Cek apakah sudah ada dan sudah dikonfirmasi
             existing = self._memory.recall_entry(key)
             if existing and existing.get("confirmed", False):
@@ -373,9 +378,9 @@ def get_consolidator() -> Consolidator:
         )
     return _consolidator_instance
 
-def init_consolidator(memory, groq_call_fn: Callable) -> Consolidator:
+def init_consolidator(memory, groq_call_fn, profiler=None) -> Consolidator:
     global _consolidator_instance
-    _consolidator_instance = Consolidator(memory, groq_call_fn)
+    _consolidator_instance = Consolidator(memory, groq_call_fn, profiler=profiler)
     return _consolidator_instance
 
 

@@ -372,6 +372,42 @@ def init_profiler(watcher) -> Profiler:
     return _profiler_instance
 
 
+def inject_hypothesis(self, fact: dict) -> Optional[Hypothesis]:
+    """
+    Terima fakta eksternal dari consolidator → buat hipotesis baru.
+    fact = {"key": "rofi.preferensi.minuman", "value": "kopi oat", "confidence": 0.8}
+    """
+    key        = fact.get("key", "")
+    value      = fact.get("value", "")
+    confidence = fact.get("confidence", 0.6)
+
+    if not key or not value:
+        return None
+
+    # Derive category dari key: rofi.<category>.<sub>
+    parts    = key.split(".")
+    category = parts[1] if len(parts) >= 2 else "preference"
+
+    claim = f"Rofi {value}"
+
+    # Cek duplikat
+    existing_claims = {h.claim for h in self._hypotheses}
+    if claim in existing_claims:
+        return None
+
+    h = Hypothesis(
+        category   = category,
+        claim      = claim,
+        evidence   = f"dari konsolidasi LLM (key={key})",
+        confidence = round(confidence, 2),
+        status     = "pending",
+    )
+    self._hypotheses.append(h)
+    self._save()
+    logger.info("[profiler] inject_hypothesis: %s (%.0f%%)", claim, confidence * 100)
+    return h
+
+
 # ─────────────────────────── Quick Test ─────────────────────────────────────
 
 if __name__ == "__main__":

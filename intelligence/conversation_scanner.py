@@ -441,7 +441,7 @@ class ConversationScanner:
 
             logger.info(
                 "[scanner] ✓ rule='%s' conf=%.0f%% claim='%s'",
-                rule.id, rule.confidence * 100, claim,
+                rule.id, final_confidence * 100, claim,
             )
 
         # Inject ke Profiler (di thread terpisah agar tidak block event loop)
