@@ -2,9 +2,9 @@
   "curiosity_boldness": 0.3,
   "conclusion_threshold": 0.4,
   "revisit_cooldown_hours": 72,
-  "response_depth": 0.4600000000000001,
+  "response_depth": 0.4800000000000001,
   "active_layer": 2,
-  "interaction_count": 37,
+  "interaction_count": 46,
   "layer_2_threshold": 10,
   "layer_3_threshold": 50
 }

@@ -82,6 +82,9 @@ class MemoryManager:
         Dipanggil saat shutdown agar Otto tidak amnesia total setelah restart.
         """
         messages = list(self._short_term)[-max_messages:]
+        if not messages:
+            logger.info("[memory] Short-term kosong, skip persist.")
+            return
         try:
             SHORT_TERM_PERSIST_PATH.parent.mkdir(parents=True, exist_ok=True)
             SHORT_TERM_PERSIST_PATH.write_text(

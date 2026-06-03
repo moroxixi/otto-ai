@@ -45,6 +45,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 from core.vocabulary import get_pending_review
+import os
+from core.config import PATHS, INTELLIGENCE
 
 logger = logging.getLogger("otto.intelligence.curiosity")
 
@@ -95,17 +97,30 @@ DEFAULT_TEMPLATES = [
 ]
 
 
+_personality_cache: dict = {"data": None, "mtime": 0.0}
 
 def _get_min_confidence() -> float:
     """
-    Hitung MIN_CONFIDENCE dari personality boldness.
-    boldness 0.0 → min_confidence 0.2 (berani tanya meski belum yakin)
-    boldness 1.0 → min_confidence 0.7 (hanya tanya kalau sangat yakin)
+    Baca curiosity_boldness dari otto_model.json (via PATHS["otto_model"]).
+    Di-cache — hanya re-read jika file berubah.
+    Fallback ke INTELLIGENCE["curiosity_boldness"] jika file tidak ada.
     """
-    from otto_self.model import load_personality
-    boldness = load_personality().get("curiosity_boldness", 0.3)
-    boldness = max(0.0, min(1.0, boldness))  # clamp 0–1
-    return 0.2 + (boldness * 0.5)  # range: 0.2–0.7
+    global _personality_cache
+    path = PATHS["otto_model"]
+    try:
+        mtime = os.path.getmtime(path)
+        if mtime != _personality_cache["mtime"] or _personality_cache["data"] is None:
+            from otto_self.model import load_personality
+            _personality_cache["data"] = load_personality()
+            _personality_cache["mtime"] = mtime
+        boldness = _personality_cache["data"].get(
+            "curiosity_boldness",
+            INTELLIGENCE["curiosity_boldness"]  # fallback ke config
+        )
+    except Exception:
+        boldness = INTELLIGENCE["curiosity_boldness"]  # fallback aman
+    boldness = max(0.0, min(1.0, boldness))
+    return 0.2 + (boldness * 0.5)
 
 # ──────────────────────────── Curiosity ──────────────────────────────────────
 
@@ -137,25 +152,10 @@ class Curiosity:
     # ── Public API ────────────────────────────────────────────────────────────
 
     async def try_ask(self) -> tuple[Optional[str], Optional[str]]:
-        """
-        Coba hasilkan pertanyaan untuk Rofi.
-
-        Return: (question_text, hypothesis_id)
-          - Keduanya None jika belum waktunya / tidak ada hipotesis layak.
-          - Jika ada pertanyaan: langsung kirim ke Rofi.
-        """
         if not self._is_good_time():
             return None, None
 
-        # Sisipkan laporan vocab pending jika ada
-        pending_vocab = get_pending_review()
-        if pending_vocab and question:
-            contoh = pending_vocab[0]
-            if contoh["tipe"] == "alias":
-                vocab_note = f" Oh iya, aku juga tangkap kata '{contoh['salah']}', aku anggap maksudnya '{contoh['benar']}' — bener ga?"
-            question += vocab_note
-
-        hypothesis = self._pick_hypothesis()
+        hypothesis = self._pick_hypothesis()        # ← assign dulu (fix bug 1a)
         if hypothesis is None:
             return None, None
 
@@ -163,7 +163,13 @@ class Curiosity:
         if not question:
             return None, None
 
-        # Update state
+        # Sisipkan vocab pending jika ada
+        pending_vocab = get_pending_review()
+        if pending_vocab:
+            contoh = pending_vocab[0]
+            if contoh["tipe"] == "alias":
+                question += f" Oh iya, aku juga tangkap kata '{contoh['salah']}', aku anggap maksudnya '{contoh['benar']}' — bener ga?"
+
         self._last_asked_at = datetime.now()
         self._pending_hypothesis_id = hypothesis.id
         self._profiler.increment_asked(hypothesis.id)
@@ -173,12 +179,13 @@ class Curiosity:
             "[curiosity] Tanya hipotesis %s: %s | Q: %s",
             hypothesis.id, hypothesis.claim, question,
         )
-        
+
         from intelligence.growth_tracker import get_tracker
         try:
             get_tracker().record_event("proactive_question", {"question": question[:60]})
         except Exception:
             pass
+
         return question, hypothesis.id
      
         

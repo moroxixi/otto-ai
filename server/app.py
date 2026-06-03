@@ -106,6 +106,20 @@ async def lifespan(app: FastAPI):
 
     brain = Brain(memory, profiler=profiler)
     logger.info("✓ Brain siap")
+    # Konsolidasikan short-term cache dari sesi sebelumnya ke long-term
+    # Ini penting: tanpa ini Otto "amnesia" tiap restart meski cache ada
+    if memory.short_term_count() > 0:
+        logger.info(
+            "[startup] Ditemukan %d pesan dari sesi sebelumnya — konsolidasi...",
+            memory.short_term_count()
+        )
+        try:
+            saved = await brain._consolidator.force_consolidate()
+            logger.info("[startup] ✓ Konsolidasi startup selesai: %d fakta.", saved)
+        except Exception as e:
+            logger.warning("[startup] Konsolidasi startup gagal (non-fatal): %s", e)
+    else:
+        logger.info("[startup] Short-term cache kosong, skip konsolidasi.")
 
     # FIX BUG 5: sync curiosity._pending_hypothesis_id dengan pending_state saat startup
     # Jika server restart saat ada pending, curiosity harus tau
