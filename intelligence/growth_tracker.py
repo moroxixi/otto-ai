@@ -267,10 +267,12 @@ class GrowthTracker:
         if profiler:
             self._sync_from_profiler(profiler)
 
-        # Tutup minggu jika sudah ganti minggu
-        current_week = self._current.get("week_number")
-        if week != current_week:
-            self._lock_week_and_start_new()
+        # Bandingkan ISO week dari start_date, bukan week_number
+        stored_start = self._current.get("start_date", "")
+        if stored_start:
+            stored_iso = date.fromisoformat(stored_start).isocalendar()[1]
+            if stored_iso != week:
+                self._lock_week_and_start_new()
 
         self._save_current()
 

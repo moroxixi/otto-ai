@@ -563,6 +563,12 @@ if __name__ == "__main__":
         def get_pending(self):
             return [h for h in self._hypotheses if h.status == "pending"]
 
+        def inject_hypothesis(self, hyp):
+            if hyp.claim not in {h.claim for h in self._hypotheses}:
+                self._hypotheses.append(hyp)
+                return True
+            return False
+
         def _save(self):
             pass  # no-op untuk test
 

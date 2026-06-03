@@ -2,73 +2,7 @@ Ini adalah analisis mengenai proyek otto
 
 ---
 
-## Analisis Otto-AI — Kekurangan & Potensi Peningkatan
 
-### 🔴 Bug Kritis (sudah terdokumentasi di text.txt, tapi perlu diperjelas)
-
-**Bug 1 — Import `self` bentrok keyword Python**
-`from self.model import` akan gagal. Sudah diganti ke `otto_self` di kode terbaru tapi perlu dicek konsistensi di semua file.
-
-**Bug 2 — `transcriber.py` punya dua model yang identik**
-```python
-# SEKARANG (salah):
-self._small = WhisperModel("small")   # command
-self._small = WhisperModel("small")   # OVERRIDE! medium tidak pernah diload
-
-# Harusnya:
-self._small  = WhisperModel(model_command, ...)
-self._medium = WhisperModel(model_chat, ...)
-```
-Dan di `transcribe()`, keduanya pakai `self._small` — jadi dual-model tidak pernah jalan.
-
-**Bug 3 — `curiosity.py` masih import yang tidak ada**
-```python
-from core.config import PATHS, INTELLIGENCE
-# tapi INTELLIGENCE["curiosity_boldness"] dipakai
-# sedangkan curiosity_boldness sudah di otto_model.json
-```
-Tidak crash, tapi jika INTELLIGENCE dict berubah struktur, akan error.
-
----
-
-### 🟡 Masalah Arsitektur
-
-**1. Vocabulary terlalu agresif — kata umum masuk sebagai "istilah"**
-
-Lihat `data/vocabulary.json` — ada kata seperti "Hei", "Yang", "Aku", "Senang", "Tapi" yang masuk sebagai istilah Whisper. Ini kontraproduktif, justru bisa bikin Whisper bias.
-
-```python
-# Di brain.py _scan_for_vocab():
-kata_kapital = re.findall(r'\b[A-Z][a-z]{2,}\b', teks)
-# Ini tangkap SEMUA kata kapital termasuk awal kalimat
-# "Aku senang bertemu kamu" → tangkap "Aku", "Senang"
-```
-
-Fix: filter stopwords sebelum tambah ke vocabulary, dan jangan tambah kata yang ada di awal kalimat (false positive tinggi).
-
-**2. Growth tracker `week_number` tidak konsisten**
-
-Di `history.json`, ada week_number 1 dan 22 dalam data yang sama — tapi keduanya di bulan Mei 2026. Week 22 adalah ISO week number dari kalender, bukan "minggu ke-N bersama Rofi". Ini akan membuat grafik pertumbuhan kelihatan aneh (loncat dari minggu 1 ke 22).
-
-```python
-# Di _load_current_week():
-week_num = len(self._history) + 1  # ← ini betul untuk "minggu bersama Rofi"
-
-# Tapi di _lock_week_and_start_new():
-year, week = _week_key(today)  # ← ini ISO week, beda konteks!
-```
-
-**3. `ConversationScanner` inject hipotesis langsung ke `profiler._hypotheses`**
-
-```python
-# conversation_scanner.py:
-self._profiler._hypotheses.append(hyp)  # akses private langsung
-self._profiler._save()
-```
-
-Ini bypass validasi di `profiler.inject_hypothesis()` yang cek duplikat lebih lengkap. Harusnya pakai method public.
-
----
 
 ### 🟠 Potensi Peningkatan
 
@@ -118,10 +52,8 @@ Jika WebSocket client kirim audio terus-menerus tanpa tunggu respons, setiap pes
 
 Yang paling perlu diperbaiki segera berdasarkan dampak:
 
-1. `transcriber.py` — dual model tidak jalan (latency lebih tinggi dari seharusnya)
-2. Vocabulary filter — kata umum tidak boleh masuk istilah Whisper
-3. Growth tracker week_number — akan confusing semakin lama Otto dipakai
-4. Rate limiting di WebSocket — risiko server overload
+
+1. Rate limiting di WebSocket — risiko server overload
 
 ---
 
