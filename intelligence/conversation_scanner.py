@@ -384,7 +384,49 @@ def _build_rules() -> list[SignalRule]:
             claim_fn   = lambda m, t: "Rofi menghargai waktu santai dan istirahat",
             confidence = 0.5,
         ),
+
+        # ── PREFERENSI KOMUNIKASI ───────────────────────────────────────────
+        SignalRule(
+            id         = "feedback_terlalu_banyak_pertanyaan",
+            patterns   = [
+                r"\b(jangan|ga usah|gausah|stop)\b.{0,30}\b(tanya|nanya)\b.{0,20}\b(banyak|banyak-banyak|melulu|terus)\b",
+                r"\btanya\b.{0,20}\b(satu|1)\b.{0,20}\b(aja|saja|dulu|cukup)\b",
+                r"\bbingung\b.{0,30}\b(harus jawab|mau jawab|jawab)\b.{0,20}\b(yang mana|duluan)\b",
+                r"\bterlalu banyak pertanyaan\b",
+                r"\b(banyak banget|kebanyakan)\b.{0,20}\b(pertanyaan|nanya|tanya)\b",
+            ],
+            source     = "user",
+            category   = "preference",
+            claim_fn   = lambda m, t: "Rofi lebih nyaman jika Otto hanya mengajukan satu pertanyaan per respons",
+            confidence = 0.85,
+        ),
+
+        SignalRule(
+            id         = "feedback_respon_terlalu_panjang",
+            patterns   = [
+                r"\b(jangan|ga usah|gausah)\b.{0,20}\b(panjang|bertele|tele)\b",
+                r"\b(singkat|pendek|to the point|ringkas)\b.{0,20}\b(aja|saja|dong|please)\b",
+                r"\bterlalu\b.{0,20}\b(panjang|verbose|bertele)\b",
+            ],
+            source     = "user",
+            category   = "preference",
+            claim_fn   = lambda m, t: "Rofi lebih suka respons Otto yang singkat dan to the point",
+            confidence = 0.8,
+        ),
+
+        SignalRule(
+            id         = "feedback_respon_terlalu_formal",
+            patterns   = [
+                r"\b(jangan|ga perlu|gaperlu)\b.{0,20}\b(formal|kaku|sopan banget)\b",
+                r"\b(santai|casual|informal)\b.{0,20}\b(aja|saja|dong)\b.{0,20}\b(ngobrol|bicara|jawab)\b",
+            ],
+            source     = "user",
+            category   = "preference",
+            claim_fn   = lambda m, t: "Rofi lebih suka Otto bicara santai dan tidak terlalu formal",
+            confidence = 0.75,
+        ),
     ]
+    
 
 
 

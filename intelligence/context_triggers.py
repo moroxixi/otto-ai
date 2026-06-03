@@ -120,8 +120,10 @@ class ContextTrigger:
         return self.status == "active" and time.time() >= self.due_at
 
     def is_expired(self) -> bool:
+        max_hours = self.context.get("max_age_hours", TRIGGER_EXPIRY_HOURS)
         age_hours = (time.time() - self.created_at) / 3600
-        return self.status == "active" and age_hours > TRIGGER_EXPIRY_HOURS
+        return self.status == "active" and age_hours > max_hours
+
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -353,54 +355,46 @@ class ContextTriggerEngine:
             return None
 
         # Deteksi emosi negatif
-        def _detect_emotion(self, text: str) -> Optional[ContextTrigger]:
-            """
-            Deteksi sinyal emosi dari teks Rofi.
-            Buat follow-up ringan + catat ke memory.
-         
-            Tidak buat trigger duplikat jika trigger emosi sudah aktif.
-            """
-            text_lower = text.lower()
-         
-            # Cek apakah sudah ada trigger emosi aktif
-            has_active_emotion = any(
-                t.trigger_type == "emotion" and t.status == "active"
-                for t in self._triggers
+        neg_found = [kw for kw in _NEGATIVE_EMOTION if kw in text_lower]
+        if neg_found:
+            emotion_word = neg_found[0]
+            due_at   = time.time() + (30 * 60)
+            followup = self._natural_emotion_followup(emotion_word, valence="negative")
+
+            return ContextTrigger(
+                trigger_type     = "emotion",
+                original_text    = text[:100],
+                followup_message = followup,
+                due_at           = due_at,
+                context          = {
+                    "emotion": emotion_word,
+                    "valence": "negative",
+                    "max_age_hours": 2,   # ← expired setelah 2 jam, tidak nyangkut seharian
+                },
             )
-            if has_active_emotion:
-                return None
-         
-            # Deteksi emosi negatif
-            neg_found = [kw for kw in _NEGATIVE_EMOTION if kw in text_lower]
-            if neg_found:
-                emotion_word = neg_found[0]
-                due_at   = time.time() + (30 * 60)
-                followup = self._natural_emotion_followup(emotion_word, valence="negative")
-         
-                return ContextTrigger(
-                    trigger_type     = "emotion",
-                    original_text    = text[:100],
-                    followup_message = followup,
-                    due_at           = due_at,
-                    context          = {"emotion": emotion_word, "valence": "negative"},
-                )
-         
-            # Deteksi emosi positif — follow-up lebih cepat (5 menit), nada ikut senang
-            pos_found = [kw for kw in _POSITIVE_EMOTION if kw in text_lower]
-            if pos_found:
-                emotion_word = pos_found[0]
-                due_at   = time.time() + (5 * 60)
-                followup = self._natural_emotion_followup(emotion_word, valence="positive")
-         
-                return ContextTrigger(
-                    trigger_type     = "emotion",
-                    original_text    = text[:100],
-                    followup_message = followup,
-                    due_at           = due_at,
-                    context          = {"emotion": emotion_word, "valence": "positive"},
-                )
-         
-            return None
+
+        # Deteksi emosi positif — follow-up lebih cepat (5 menit), nada ikut senang
+        pos_found = [kw for kw in _POSITIVE_EMOTION if kw in text_lower]
+        if pos_found:
+            emotion_word = pos_found[0]
+            due_at   = time.time() + (5 * 60)
+            followup = self._natural_emotion_followup(emotion_word, valence="positive")
+
+            return ContextTrigger(
+                trigger_type     = "emotion",
+                original_text    = text[:100],
+                followup_message = followup,
+                due_at           = due_at,
+                context          = {
+                    "emotion": emotion_word,
+                    "valence": "positive",
+                    "max_age_hours": 1,   # ← emosi positif relevansinya lebih pendek
+                },
+            )
+
+        return None
+
+
 
     def _natural_emotion_followup(self, emotion_word: str, valence: str) -> str:
         """Buat kalimat follow-up yang terasa natural, bukan kaku."""
