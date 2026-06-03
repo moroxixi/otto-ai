@@ -1,0 +1,28 @@
+[
+  {
+    "id": "2ac080a6",
+    "trigger_type": "emotion",
+    "original_text": "Aku sih oke, tapi apakah kamu dapat menengahanku dengan jelas di suasana yang berisik ini? Setelah a",
+    "followup_message": "Eh Rofi, masih bingung? Mau cerita nggak?",
+    "due_at": 1780462596.686776,
+    "created_at": 1780460796.6870825,
+    "status": "active",
+    "context": {
+      "emotion": "bingung",
+      "valence": "negative"
+    }
+  },
+  {
+    "id": "fbec7fd2",
+    "trigger_type": "intent",
+    "original_text": "Mari kita jawab satu-persatu atau biar aku jawab satu dulu, rencana untuk melakukan hal-hal yang ber",
+    "followup_message": "Eh Rofi, tadi kamu bilang pergi ke kebon binatang. Gimana, jadi nggak?",
+    "due_at": 1780468903.8182695,
+    "created_at": 1780461703.818799,
+    "status": "active",
+    "context": {
+      "matched": "ingin pergi",
+      "intent_object": "pergi ke kebon binatang"
+    }
+  }
+]

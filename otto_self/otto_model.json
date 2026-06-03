@@ -2,9 +2,16 @@
   "curiosity_boldness": 0.3,
   "conclusion_threshold": 0.4,
   "revisit_cooldown_hours": 72,
-  "response_depth": 0.4800000000000001,
-  "active_layer": 2,
-  "interaction_count": 46,
+  "response_depth": 0.5000000000000001,
+  "active_layer": 3,
+  "interaction_count": 53,
   "layer_2_threshold": 10,
-  "layer_3_threshold": 50
+  "layer_3_threshold": 50,
+  "rofi_communication_style": {
+    "avg_response_length": 231.3,
+    "tends_to_elaborate": true,
+    "correction_rate": 0.143,
+    "preferred_question_style": "direct",
+    "sample_count": 7
+  }
 }
