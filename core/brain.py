@@ -96,10 +96,10 @@ class Brain:
             "aktif" if self._scanner else "nonaktif (profiler tidak diberikan)",
         )
 
-    async def _evolve_personality(self, interaction_type: str = "normal") -> None:
+    async def _evolve_personality(self, interaction_type: str = "normal", user_text: str = "") -> None:
         try:
             personality = await asyncio.to_thread(load_personality)
-            updated = after_interaction(personality, interaction_type)
+            updated = after_interaction(personality, interaction_type, user_text=user_text)
             await asyncio.to_thread(save_personality, updated)
             logger.debug("[brain] Personality updated → layer=%d count=%d",
                          updated["active_layer"], updated["interaction_count"])
@@ -150,7 +150,7 @@ class Brain:
         asyncio.create_task(self._log_to_memory(user_text, text))
         asyncio.create_task(self._scan_conversation(user_text, text))
         asyncio.create_task(self._consolidator.maybe_consolidate())
-        asyncio.create_task(self._evolve_personality("normal"))
+        asyncio.create_task(self._evolve_personality("normal", user_text=user_text))
         asyncio.create_task(self._scan_for_vocab(user_text))
         return resp
 
@@ -195,7 +195,7 @@ class Brain:
         asyncio.create_task(self._log_to_memory(user_text, "".join(full_text)))
         asyncio.create_task(self._scan_conversation(user_text, "".join(full_text)))
         asyncio.create_task(self._consolidator.maybe_consolidate())
-        asyncio.create_task(self._evolve_personality("normal"))
+        asyncio.create_task(self._evolve_personality("normal", user_text=user_text))
 
     async def close(self) -> None:
         await self._client.aclose()

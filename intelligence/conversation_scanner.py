@@ -463,6 +463,8 @@ class ConversationScanner:
         Return:
             list[SignalHit] — sinyal yang ditemukan (untuk logging/debug)
         """
+        about_rofi = _is_about_rofi(text)
+
         if not text or not text.strip():
             return []
 
@@ -477,7 +479,7 @@ class ConversationScanner:
             if not match:
                 continue
             # Fix 2: Cek apakah kalimat tentang Rofi, bukan orang lain
-            if not _is_about_rofi(text):
+            if not about_rofi:
                 logger.debug(
                     "[scanner] Skip rule '%s' — kalimat tentang orang lain: \"%s\"",
                     rule.id, text[:60],

@@ -85,6 +85,16 @@ DEFAULT_PERSONALITY = {
     # Threshold untuk naik ke layer berikutnya
     "layer_2_threshold": 10,   # 10 interaksi → mulai observatif
     "layer_3_threshold": 50,   # 50 interaksi → mulai proaktif
+
+    # ── Adaptive Response Style (Fix 3) ──────────────────────────────────────
+    # Diisi dari data nyata percakapan, bukan hardcode
+    "rofi_communication_style": {
+        "avg_response_length": 0,       # karakter rata-rata per pesan Rofi
+        "tends_to_elaborate": False,    # apakah Rofi sering elaborasi?
+        "correction_rate": 0.0,         # seberapa sering Rofi koreksi Otto
+        "preferred_question_style": "unknown",  # "direct" | "open" | "unknown"
+        "sample_count": 0,              # jumlah sampel yang sudah dihitung
+    },
 }
 
 
@@ -199,7 +209,7 @@ def save_personality(personality: dict) -> None:
 # BAGIAN 5 — EVOLUSI KEPRIBADIAN (dipanggil setelah setiap interaksi)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def after_interaction(personality: dict, interaction_type: str = "normal") -> dict:
+def after_interaction(personality: dict, interaction_type: str = "normal", user_text: str | None = None,) -> dict:
     """
     Dipanggil setelah setiap interaksi dengan Rofi.
     Otto "tumbuh" sedikit demi sedikit.
@@ -240,6 +250,49 @@ def after_interaction(personality: dict, interaction_type: str = "normal") -> di
     # Response depth tumbuh perlahan seiring pengalaman
     if n % 10 == 0:
         p["response_depth"] = min(1.0, p["response_depth"] + 0.02)
+
+    # Update communication style dari teks nyata
+    if user_text:
+        style = p.setdefault("rofi_communication_style", {
+            "avg_response_length": 0,
+            "tends_to_elaborate": False,
+            "correction_rate": 0.0,
+            "preferred_question_style": "unknown",
+            "sample_count": 0,
+        })
+
+        n_samples = style.get("sample_count", 0)
+        text_len  = len(user_text.strip())
+
+        # Rolling average panjang pesan
+        prev_avg = style.get("avg_response_length", 0)
+        style["avg_response_length"] = round(
+            (prev_avg * n_samples + text_len) / (n_samples + 1), 1
+        )
+
+        # Tends to elaborate: avg > 80 karakter
+        style["tends_to_elaborate"] = style["avg_response_length"] > 80
+
+        # Preferred question style dari pola teks
+        t = user_text.lower()
+        if any(w in t for w in ["kenapa", "gimana", "bagaimana", "mengapa"]):
+            style["preferred_question_style"] = "open"
+        elif any(w in t for w in ["iya", "nggak", "ya", "tidak", "bener"]):
+            style["preferred_question_style"] = "direct"
+
+        # Correction rate: apakah Rofi koreksi Otto?
+        if any(w in t for w in ["bukan", "salah", "maksudku", "yang aku maksud", "koreksi"]):
+            prev_rate = style.get("correction_rate", 0.0)
+            style["correction_rate"] = round(
+                (prev_rate * n_samples + 1.0) / (n_samples + 1), 3
+            )
+        elif n_samples > 0:
+            prev_rate = style.get("correction_rate", 0.0)
+            style["correction_rate"] = round(
+                (prev_rate * n_samples) / (n_samples + 1), 3
+            )
+
+        style["sample_count"] = n_samples + 1
 
     return p
 
@@ -307,6 +360,17 @@ def self_summary_text() -> str:
         f"Keberanian bertanya: {p['curiosity_boldness']:.0%}.",
         f"Threshold simpulkan: {p['conclusion_threshold']:.0%}.",
     ]
+
+    # Sertakan style Rofi jika sudah ada data cukup
+    style = p.get("rofi_communication_style", {})
+    if style.get("sample_count", 0) >= 10:
+        elaborates = "suka elaborasi" if style.get("tends_to_elaborate") else "cenderung singkat"
+        q_style    = style.get("preferred_question_style", "unknown")
+        lines.append(
+            f"Gaya komunikasi Rofi: {elaborates}, "
+            f"suka pertanyaan {q_style}, "
+            f"koreksi Otto {style.get('correction_rate', 0):.0%} dari interaksi."
+        )
 
     # Tambahkan info upgrade jika ada
     changelog_file = SELF_DIR / "last_changes.json"
