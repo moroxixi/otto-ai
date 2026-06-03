@@ -518,7 +518,7 @@ async function loadData() {
 // ── Render ──────────────────────────────────────────────────────────────
 function render(data) {
   const { cumulative_total, weekly_history, current_week } = data;
-  const [milName, milDesc] = getMilestone(cumulative_total);
+  const [milThresh, milName, milDesc] = getMilestone(cumulative_total);
   const nextMil = getNextMilestone(cumulative_total);
   const prevMil = getMilestone(cumulative_total - 1);
   const progressPct = nextMil
