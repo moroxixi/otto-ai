@@ -98,11 +98,12 @@ async def lifespan(app: FastAPI):
     speaker = Speaker()
     logger.info("✓ Speaker siap (Kokoro + Piper streaming)")
 
-    brain = Brain(memory, profiler=profiler)
-    logger.info("✓ Brain siap")
+    
 
     watcher   = init_watcher()
     profiler  = init_profiler(watcher)
+    brain = Brain(memory, profiler=profiler)
+    logger.info("✓ Brain siap")
     curiosity = init_curiosity(profiler, memory)
     scheduler = init_scheduler(
     watcher, profiler, curiosity,

@@ -364,6 +364,7 @@ class Scheduler:
         }
 
     def force_run(self, task_name: str) -> bool:
+        # BENAR:
         for task in self._tasks:
             if task.name == task_name:
                 t = asyncio.create_task(task.run(), name=f"otto.scheduler.force.{task_name}")
@@ -371,8 +372,9 @@ class Scheduler:
                 t.add_done_callback(self._background_tasks.discard)
                 logger.info("[scheduler] Force run: %s", task_name)
                 return True
-            logger.warning("[scheduler] Task tidak ditemukan: %s", task_name)
-            return False
+        
+        logger.warning("[scheduler] Task tidak ditemukan: %s", task_name)
+        return False
 
     def __repr__(self) -> str:
         status = "running" if self._running else "stopped"
