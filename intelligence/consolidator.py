@@ -356,6 +356,12 @@ class Consolidator:
     def _parse_relations(self, raw_text: str) -> list[dict]:
         """Parse JSON relasi dari respons LLM."""
         text = raw_text.strip()
+        
+        # Guard: response kosong dari LLM — jangan sampai masuk json.loads
+        if not text:
+            logger.info("[consolidator] Tidak ada relasi baru ditemukan.")
+            return []
+        
         if text.startswith("```"):
             lines = text.split("\n")
             text  = "\n".join(lines[1:-1]) if len(lines) > 2 else text

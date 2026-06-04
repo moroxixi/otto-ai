@@ -46,7 +46,7 @@
     "followup_message": "Eh Rofi, tadi kamu bilang beli kedua nya sebetulnya. Gimana, jadi nggak?",
     "due_at": 1780577313.4276955,
     "created_at": 1780570113.4282997,
-    "status": "active",
+    "status": "done",
     "context": {
       "matched": "mau beli",
       "intent_object": "beli kedua nya sebetulnya"
@@ -62,6 +62,20 @@
     "status": "done",
     "context": {
       "emotion": "senang",
+      "valence": "positive",
+      "max_age_hours": 1
+    }
+  },
+  {
+    "id": "8e84dd5e",
+    "trigger_type": "emotion",
+    "original_text": "Ya betul seperti itu, tapi kalau aku tidak bilang ulangi, maksudku kalau aku tidak bilang ulangi, ka",
+    "followup_message": "Hei Rofi, tadi kamu bilang mantap — cerita dong!",
+    "due_at": 1780577667.381048,
+    "created_at": 1780577367.3814628,
+    "status": "active",
+    "context": {
+      "emotion": "mantap",
       "valence": "positive",
       "max_age_hours": 1
     }

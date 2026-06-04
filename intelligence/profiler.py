@@ -240,6 +240,19 @@ class Profiler:
 
         if not key or not value:
             return None
+        # Tolak value yang terlalu pendek atau tidak informatif
+        # Bukan hardcode list — tapi ukur panjang dan kepadatan informasi
+        stripped = value.strip()
+        if len(stripped) < 8:
+            logger.debug("[profiler] Skip inject — value terlalu pendek: '%s'", stripped)
+            return None
+        
+        # Tolak jika value tidak punya kata benda/kerja yang bermakna
+        # (heuristic: minimal 2 kata yang bukan stopword pendek)
+        meaningful_words = [w for w in stripped.split() if len(w) > 3]
+        if len(meaningful_words) < 1:
+            logger.debug("[profiler] Skip inject — value tidak informatif: '%s'", stripped)
+            return None
 
         # Derive category dari key: rofi.<category>.<sub>
         parts    = key.split(".")
