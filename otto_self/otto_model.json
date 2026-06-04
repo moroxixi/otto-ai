@@ -2,16 +2,16 @@
   "curiosity_boldness": 0.3,
   "conclusion_threshold": 0.4,
   "revisit_cooldown_hours": 72,
-  "response_depth": 0.5200000000000001,
+  "response_depth": 1.0,
   "active_layer": 3,
-  "interaction_count": 60,
   "layer_2_threshold": 10,
   "layer_3_threshold": 50,
   "rofi_communication_style": {
-    "avg_response_length": 291.5,
+    "avg_response_length": 178.3,
     "tends_to_elaborate": true,
-    "correction_rate": 0.286,
-    "preferred_question_style": "open",
-    "sample_count": 14
-  }
+    "correction_rate": 0.276,
+    "preferred_question_style": "direct",
+    "sample_count": 58
+  },
+  "interaction_count": 60
 }

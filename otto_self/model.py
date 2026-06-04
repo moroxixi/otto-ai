@@ -206,7 +206,7 @@ def save_personality(personality: dict) -> None:
 # BAGIAN 5 — EVOLUSI KEPRIBADIAN (dipanggil setelah setiap interaksi)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def after_interaction(personality: dict, interaction_type: str = "normal", user_text: str | None = None,) -> dict:
+def after_interaction(personality: dict, interaction_type: str = "normal", user_text: str | None = None, interaction_count: int = 0) -> dict:
     """
     Dipanggil setelah setiap interaksi dengan Rofi.
     Otto "tumbuh" sedikit demi sedikit.

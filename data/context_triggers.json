@@ -26,17 +26,44 @@
     }
   },
   {
-    "id": "6c45a3de",
+    "id": "684913ee",
     "trigger_type": "emotion",
-    "original_text": "Entahlah, aku bingung kamu saja yang bertanya.",
-    "followup_message": "Gimana sekarang, masih ngerasa bingung?",
-    "due_at": 1780500579.0610917,
-    "created_at": 1780498779.0613122,
-    "status": "active",
+    "original_text": "Hai Otto, isiakan aku sedang nganduk dan pusing setelah melesaikan nambang di autofile.",
+    "followup_message": "Eh Rofi, masih pusing? Mau cerita nggak?",
+    "due_at": 1780551605.6288598,
+    "created_at": 1780549805.6290681,
+    "status": "done",
     "context": {
-      "emotion": "bingung",
+      "emotion": "pusing",
       "valence": "negative",
       "max_age_hours": 2
+    }
+  },
+  {
+    "id": "0800ac46",
+    "trigger_type": "intent",
+    "original_text": "Ya, tadinya mau beli kedua nya sebetulnya, tapi aku baru ingat bahwa ternyata besok aku masih belum ",
+    "followup_message": "Eh Rofi, tadi kamu bilang beli kedua nya sebetulnya. Gimana, jadi nggak?",
+    "due_at": 1780577313.4276955,
+    "created_at": 1780570113.4282997,
+    "status": "active",
+    "context": {
+      "matched": "mau beli",
+      "intent_object": "beli kedua nya sebetulnya"
+    }
+  },
+  {
+    "id": "e328ff8d",
+    "trigger_type": "emotion",
+    "original_text": "Ya aku senang, tadi aku belanja sekalian jalan-jalan sama istri pulangnya beli gorengan untuk cemila",
+    "followup_message": "Wah, ada kabar baik nih kayaknya? Tadi kamu kedengeran senang.",
+    "due_at": 1780570497.6767528,
+    "created_at": 1780570197.6768906,
+    "status": "done",
+    "context": {
+      "emotion": "senang",
+      "valence": "positive",
+      "max_age_hours": 1
     }
   }
 ]

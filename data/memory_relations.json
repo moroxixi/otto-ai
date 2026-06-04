@@ -74,5 +74,120 @@
     "confidence": 0.7,
     "created_at": 1780496624.1393578,
     "confirmed_at": null
+  },
+  "rofi_bingung_kegiatan_mungkin_kebun_binatang": {
+    "id": "rofi_bingung_kegiatan_mungkin_kebun_binatang",
+    "from_facts": [
+      "rofi.mood.last_negative",
+      "rofi.jadwal.kegiatan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi baru saja merasa bingung dan memiliki beberapa pilihan kegiatan",
+    "implication": "Jika Rofi bingung, ajak dia membahas kegiatan kebun binatang atau pantai untuk mengalihkan perhatiannya",
+    "confidence": 0.8,
+    "created_at": 1780549683.0476496,
+    "confirmed_at": null
+  },
+  "rofi_suka_belajar_pernah_jadi_ayah_baik": {
+    "id": "rofi_suka_belajar_pernah_jadi_ayah_baik",
+    "from_facts": [
+      "rofi.karakter.hasil",
+      "rofi.jadwal.kelahiran"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki keinginan menjadi ayah yang baik dan telah menjadi ayah",
+    "implication": "Ketika Rofi stress, ajak dia membahas soal parenting atau tips menjadi ayah yang baik",
+    "confidence": 0.9,
+    "created_at": 1780549683.278919,
+    "confirmed_at": null
+  },
+  "rofi_belum_yakin_pernikahan_status": {
+    "id": "rofi_belum_yakin_pernikahan_status",
+    "from_facts": [
+      "rofi.jadwal.pernikahan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi belum memiliki informasi tentang status pernikahannya",
+    "implication": "Jangan tanya Rofi tentang pernikahan atau hubungan romantisnya",
+    "confidence": 0.6,
+    "created_at": 1780549683.2801132,
+    "confirmed_at": null
+  },
+  "kebun_binatang_pantai_ikan": {
+    "id": "kebun_binatang_pantai_ikan",
+    "from_facts": [
+      "rofi.jadwal.kegiatan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi ingin menghabiskan waktu bersama keluarga",
+    "implication": "Pesan tiket ke bioskop atau hiburan keluarga untuk tanggal 26 Mei, karena Rofi akan meninggalkan anak pertama",
+    "confidence": 0.8,
+    "created_at": 1780550216.3541224,
+    "confirmed_at": null
+  },
+  "ayah_yang_baik_ibu_riil": {
+    "id": "ayah_yang_baik_ibu_riil",
+    "from_facts": [
+      "rofi.karakter.hasil",
+      "rofi.kesehatan.anak"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi ingin menjadi ayah yang baik, tapi anaknya belum rewel",
+    "implication": "Jangan mengirimkan konten-konten yang menekankan anak harus rewel atau sulit, karena Rofi ingin menjadi ayah yang baik",
+    "confidence": 0.7,
+    "created_at": 1780550216.355605,
+    "confirmed_at": null
+  },
+  "pusing_pagi_kegiatan_seimbang": {
+    "id": "pusing_pagi_kegiatan_seimbang",
+    "from_facts": [
+      "rofi.mood.last_negative",
+      "rofi.jadwal.kegiatan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi baru saja merasa pusing, jadi kegiatan seimbang di pagi hari sangat penting",
+    "implication": "Tawarkan kegiatan relaksasi atau olahraga ringan untuk Rofi di pagi hari",
+    "confidence": 0.85,
+    "created_at": 1780550216.3589895,
+    "confirmed_at": null
+  },
+  "tidur_larut_produktif_malam": {
+    "id": "tidur_larut_produktif_malam",
+    "from_facts": [
+      "rofi.kebiasaan.mandiri",
+      "rofi.jadwal.kegiatan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi tidur larut, kemungkinan tidak efektif dalam menjalankan jadwal kegiatan",
+    "implication": "Pastikan Rofi memiliki waktu istirahat yang cukup sebelum menjalankan jadwal kegiatan",
+    "confidence": 0.7,
+    "created_at": 1780570047.1918263,
+    "confirmed_at": null
+  },
+  "mengantar_barang_ke_teman": {
+    "id": "mengantar_barang_ke_teman",
+    "from_facts": [
+      "rofi.jadwal.kegiatan",
+      "rofi.pekerjaan.jenis"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi sering mengantar barang ke teman, yang mungkin terkait dengan pekerjaannya",
+    "implication": "Mungkin Rofi perlu mempertimbangkan untuk mengembangkan jaringan bisnis yang lebih luas",
+    "confidence": 0.8,
+    "created_at": 1780570047.1953363,
+    "confirmed_at": null
+  },
+  "kesehatan_anak_penting": {
+    "id": "kesehatan_anak_penting",
+    "from_facts": [
+      "rofi.jadwal.kelahiran",
+      "rofi.kesehatan.anak"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi baru saja meninggalkan anak pertama, dan anak tersebut belum rewel",
+    "implication": "Otto mungkin perlu memantau kesehatan anak Rofi secara lebih ketat",
+    "confidence": 0.85,
+    "created_at": 1780570047.1957798,
+    "confirmed_at": null
   }
 }
