@@ -46,6 +46,7 @@ scheduler = None
 tracker   = None
 transcriber: Transcriber | None = None
 active_ws: WebSocket | None = None
+_curiosity_lock = asyncio.Lock()
 
 STT_TIMEOUT = WHISPER.get("stt_timeout", 300)
 
