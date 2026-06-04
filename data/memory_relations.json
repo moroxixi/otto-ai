@@ -35,5 +35,44 @@
     "confidence": 0.9,
     "created_at": 1780491379.9164672,
     "confirmed_at": null
+  },
+  "rofi_tidak_enerjik": {
+    "id": "rofi_tidak_enerjik",
+    "from_facts": [
+      "rofi.mood.last_negative",
+      "rofi.jadwal.kelahiran"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi baru saja meninggalkan anak pertama, kemungkinan masih lelah dan tidak energik",
+    "implication": "Berikan informasi yang ringan dan tidak memerlukan perhatian mendalam",
+    "confidence": 0.8,
+    "created_at": 1780496624.1380322,
+    "confirmed_at": null
+  },
+  "rofi_membutuhkan_kasih_sayang": {
+    "id": "rofi_membutuhkan_kasih_sayang",
+    "from_facts": [
+      "rofi.karakter.hasil",
+      "rofi.jadwal.kelahiran"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi ingin menjadi ayah yang baik, dan baru saja meninggalkan anak pertama",
+    "implication": "Berikan dukungan dan kasih sayang kepada Rofi",
+    "confidence": 0.9,
+    "created_at": 1780496624.1389344,
+    "confirmed_at": null
+  },
+  "rofi_membutuhkan_penyegaran": {
+    "id": "rofi_membutuhkan_penyegaran",
+    "from_facts": [
+      "rofi.jadwal.kegiatan",
+      "rofi.preferensi.minuman"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki beberapa kegiatan yang menarik, dan suka minum kopi oat",
+    "implication": "Ajak Rofi untuk mencoba kegiatan baru dan memberikan ide untuk minuman yang enak",
+    "confidence": 0.7,
+    "created_at": 1780496624.1393578,
+    "confirmed_at": null
   }
 }

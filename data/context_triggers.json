@@ -19,10 +19,24 @@
     "followup_message": "Eh Rofi, tadi kamu bilang pergi ke kebon binatang. Gimana, jadi nggak?",
     "due_at": 1780468903.8182695,
     "created_at": 1780461703.818799,
-    "status": "active",
+    "status": "done",
     "context": {
       "matched": "ingin pergi",
       "intent_object": "pergi ke kebon binatang"
+    }
+  },
+  {
+    "id": "6c45a3de",
+    "trigger_type": "emotion",
+    "original_text": "Entahlah, aku bingung kamu saja yang bertanya.",
+    "followup_message": "Gimana sekarang, masih ngerasa bingung?",
+    "due_at": 1780500579.0610917,
+    "created_at": 1780498779.0613122,
+    "status": "active",
+    "context": {
+      "emotion": "bingung",
+      "valence": "negative",
+      "max_age_hours": 2
     }
   }
 ]
