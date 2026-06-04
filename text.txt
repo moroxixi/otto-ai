@@ -57,5 +57,5 @@ Ini ringkasan lengkap bug yang perlu di fix.
 
 ---
 
-Aku sudah fix 1. mari lanjutkan ke no 2. file apa yang kamu butuhkan. dan mari buat patch saja alih alih kamu menulis semuanya dari 0 buat dengan mencantumkan sebelum dan sesudah supaya dapat mudah dimengerti.
+Aku sudah fix 1,2,3. mari lanjutkan ke no 4. file apa yang kamu butuhkan. dan mari buat patch saja alih alih kamu menulis semuanya dari 0 buat dengan mencantumkan sebelum dan sesudah supaya dapat mudah dimengerti.
 

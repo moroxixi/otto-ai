@@ -404,19 +404,20 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
 
     context_engine = brain.get_context_engine()
     due_triggers = context_engine.get_due_triggers()
+    context_triggered = False
+    
     if due_triggers and not pending_state.get():
-        # Ambil trigger paling lama dulu (FIFO), skip sisanya
         trigger = due_triggers[0]
         context_engine.mark_done(trigger.id)
-        # Selipkan ke reply sebelum dikirim ke Rofi
         reply = resp.text + f"\n\nOh iya — {trigger.followup_message}"
+        context_triggered = True          # ← flag
         logger.info(
             "[app] Context trigger due: [%s] %s",
             trigger.trigger_type, trigger.followup_message[:60],
         )
-
+    
     injected_hyp_id = None
-    if curiosity and not pending_state.get():
+    if curiosity and not pending_state.get() and not context_triggered:  # ← gate
         try:
             question, hyp_id = await curiosity.try_ask()
             if question and hyp_id:
