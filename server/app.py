@@ -403,12 +403,14 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
 
     if tracker:
         tracker.record_interaction(text_length=len(text))
-        # BUG 6: pakai tracker sebagai single source of truth untuk interaction_count
         from otto_self import model as otto_model
         _total = tracker._current.get("interactions", 0) + sum(
             w.get("interactions", 0) for w in tracker._history
         )
         _personality = otto_model.load_personality()
+        # Simpan interaction_count ke dalam dict sebelum after_interaction
+        # supaya _evolve_personality di brain.py baca nilai yang sama
+        _personality["interaction_count"] = _total
         _personality = otto_model.after_interaction(
             _personality,
             interaction_count=_total,
@@ -431,9 +433,10 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
         )
     
     injected_hyp_id = None
-    if curiosity and not pending_state.get() and not context_triggered:  # ← gate
+    if curiosity and not pending_state.get() and not context_triggered:
         try:
-            question, hyp_id = await curiosity.try_ask()
+            async with _curiosity_lock:
+                question, hyp_id = await curiosity.try_ask()
             if question and hyp_id:
                 reply = reply + f"\n\nOmong-omong — {question}"
                 injected_hyp_id = hyp_id

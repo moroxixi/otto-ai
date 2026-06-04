@@ -316,7 +316,7 @@ def self_report(include_stats: bool = True) -> dict:
         "layer": {
             "current": personality["active_layer"],
             "description": layer_desc.get(personality["active_layer"], "?"),
-            "interactions_so_far": personality["interaction_count"],
+            "interactions_so_far": personality.get("interaction_count", 0),
             "next_milestone": (
                 personality["layer_2_threshold"] if personality["active_layer"] == 1
                 else personality["layer_3_threshold"] if personality["active_layer"] == 2

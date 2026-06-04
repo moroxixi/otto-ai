@@ -93,7 +93,7 @@ class Brain:
         self._client  = httpx.AsyncClient(timeout=30.0)
 
         self._scanner = ConversationScanner(profiler) if profiler else None
-        self._consolidator = init_consolidator(memory, groq_call_fn=self._call_groq)
+        self._consolidator = init_consolidator(memory, groq_call_fn=self._call_groq, profiler=profiler)
         self._context_engine = ContextTriggerEngine(memory)
 
         self._cached_prompt: str = ""
@@ -108,7 +108,10 @@ class Brain:
     async def _evolve_personality(self, interaction_type: str = "normal", user_text: str = "") -> None:
         try:
             personality = await asyncio.to_thread(load_personality)
-            updated = after_interaction(personality, interaction_type, user_text=user_text)
+            # Ambil interaction_count dari personality itu sendiri (sudah di-update oleh app.py)
+            # Fallback ke 0 jika belum ada
+            n = personality.get("interaction_count", 0)
+            updated = after_interaction(personality, interaction_type, user_text=user_text, interaction_count=n)
             await asyncio.to_thread(save_personality, updated)
             logger.debug("[brain] Personality updated → layer=%d count=%d",
                          updated["active_layer"], updated["interaction_count"])

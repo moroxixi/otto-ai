@@ -42,7 +42,7 @@ __pycache__/
 .venv/
 venv/
 
-
+otto_for_claude.txt
 
 # ─── Log & temp ───────────────────────────────────────────────────────────────
 otto.log
