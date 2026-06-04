@@ -47,6 +47,7 @@ from typing import Optional
 from core.vocabulary import get_pending_review
 import os
 from core.config import PATHS, INTELLIGENCE
+from intelligence.pending_state import pending_state
 
 logger = logging.getLogger("otto.intelligence.curiosity")
 
@@ -171,6 +172,7 @@ class Curiosity:
 
         self._last_asked_at = datetime.now()
         self._pending_hypothesis_id = hypothesis.id
+        pending_state.set(hypothesis.id)          # ← single source of truth
         self._profiler.increment_asked(hypothesis.id)
         self._save_state()
 
@@ -215,6 +217,7 @@ class Curiosity:
 
        # Reset pending
        self._pending_hypothesis_id = None
+       pending_state.clear()
        self._save_state()
        return verdict
 
@@ -236,6 +239,7 @@ class Curiosity:
                 self._pending_hypothesis_id,
             )
         self._pending_hypothesis_id = None
+        pending_state.clear()
         self._save_state()
 
     # ── Pemilihan Hipotesis ───────────────────────────────────────────────────
@@ -397,9 +401,9 @@ class Curiosity:
         """
         now = datetime.now()
 
-        # Jangan tanya jika masih ada pertanyaan yang menggantung
-        if self._pending_hypothesis_id is not None:
-            logger.debug("[curiosity] Ada pending hipotesis, skip tanya.")
+        from intelligence.pending_state import pending_state
+        if pending_state.has_pending():
+            logger.debug("[curiosity] Ada pending hipotesis (disk), skip tanya.")
             return False
 
         # Jam tidak aman
