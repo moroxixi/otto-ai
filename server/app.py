@@ -123,6 +123,8 @@ async def lifespan(app: FastAPI):
         try:
             saved = await brain._consolidator.force_consolidate()
             logger.info("[startup] ✓ Konsolidasi startup selesai: %d fakta.", saved)
+            memory.clear_short_term()  # BUG 4: bersihkan cache lama — data sudah aman di long-term
+            logger.info("[startup] Short-term cache dibersihkan setelah konsolidasi.")
         except Exception as e:
             logger.warning("[startup] Konsolidasi startup gagal (non-fatal): %s", e)
     else:
@@ -401,6 +403,18 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
 
     if tracker:
         tracker.record_interaction(text_length=len(text))
+        # BUG 6: pakai tracker sebagai single source of truth untuk interaction_count
+        from otto_self import model as otto_model
+        _total = tracker._current.get("interactions", 0) + sum(
+            w.get("interactions", 0) for w in tracker._history
+        )
+        _personality = otto_model.load_personality()
+        _personality = otto_model.after_interaction(
+            _personality,
+            interaction_count=_total,
+            user_text=text,
+        )
+        otto_model.save_personality(_personality)
 
     context_engine = brain.get_context_engine()
     due_triggers = context_engine.get_due_triggers()

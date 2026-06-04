@@ -79,9 +79,6 @@ DEFAULT_PERSONALITY = {
     # 1 = reaktif, 2 = observatif, 3 = proaktif
     "active_layer": 1,
 
-    # Jumlah interaksi yang sudah terjadi (dipakai untuk naikan layer)
-    "interaction_count": 0,
-
     # Threshold untuk naik ke layer berikutnya
     "layer_2_threshold": 10,   # 10 interaksi → mulai observatif
     "layer_3_threshold": 50,   # 50 interaksi → mulai proaktif
@@ -221,8 +218,7 @@ def after_interaction(personality: dict, interaction_type: str = "normal", user_
       "proactive"   → Otto yang inisiatif tanya duluan
     """
     p = dict(personality)
-    p["interaction_count"] += 1
-    n = p["interaction_count"]
+    n = interaction_count  # BUG 6: baca dari tracker, bukan simpan sendiri
 
     # Naik layer berdasarkan pengalaman
     if n >= p["layer_3_threshold"]:
@@ -356,10 +352,8 @@ def self_summary_text() -> str:
     lines = [
         f"Aku Otto, asisten proaktif milik Rofi.",
         f"Lapisan saat ini: {label} (layer {p['active_layer']}).",
-        f"Sudah {p['interaction_count']} interaksi dengan Rofi.",
         f"Keberanian bertanya: {p['curiosity_boldness']:.0%}.",
-        f"Threshold simpulkan: {p['conclusion_threshold']:.0%}.",
-    ]
+        ]
 
     # Sertakan style Rofi jika sudah ada data cukup
     style = p.get("rofi_communication_style", {})
