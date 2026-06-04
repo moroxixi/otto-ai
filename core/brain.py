@@ -410,30 +410,28 @@ class Brain:
         import re
     
         # Stopwords — kata umum Indonesia yang sering kapital di awal kalimat
-        STOPWORDS = {
-            "Aku", "Saya", "Kamu", "Dia", "Kita", "Mereka", "Kami",
-            "Yang", "Dan", "Tapi", "Atau", "Jadi", "Kalau", "Karena",
-            "Sudah", "Belum", "Akan", "Bisa", "Mau", "Maka", "Juga",
-            "Ini", "Itu", "Ada", "Tidak", "Nggak", "Bukan", "Punya",
-            "Senang", "Bagus", "Baik", "Hei", "Hai", "Oke", "Iya",
-            "Otto", "Rofi",
-        }
+        SUFFIX_UMUM = ("nya", "kan", "lah", "pun", "kah", "mu", "ku")
     
-        # Pisah jadi kalimat dulu, lalu ambil kata kapital yang BUKAN di posisi pertama
         kalimat_list = re.split(r'[.!?]', teks)
-        kandidat = set()
+        frekuensi: dict[str, int] = {}
+        total_kalimat = len([k for k in kalimat_list if k.strip()])
     
+        kandidat = set()
         for kalimat in kalimat_list:
             kata_list = kalimat.strip().split()
-            # Skip kata pertama (selalu kapital karena awal kalimat)
-            for kata in kata_list[1:]:
-                # Harus: kapital, minimal 3 huruf, hanya huruf
-                if re.match(r'^[A-Z][a-z]{2,}$', kata):
+            for kata in kata_list[1:]:  # skip posisi pertama
+                if re.match(r'^[A-Z][a-z]{3,}$', kata):  # minimal 4 huruf
                     kandidat.add(kata)
+                    frekuensi[kata] = frekuensi.get(kata, 0) + 1
     
         for kata in kandidat:
-            if kata not in STOPWORDS:
-                tambah_istilah(kata, sumber="otto")
+            # Filter suffix umum Indonesia
+            if any(kata.lower().endswith(s) for s in SUFFIX_UMUM):
+                continue
+            # Filter kata terlalu frekuen (kata umum muncul di >30% kalimat)
+            if total_kalimat > 0 and frekuensi[kata] / total_kalimat > 0.30:
+                continue
+            tambah_istilah(kata, sumber="otto")
 
     async def check_context_triggers(self, user_text: str, otto_text: str) -> None:
         """

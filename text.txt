@@ -1,60 +1,61 @@
-Ini adalah analisis mengenai proyek otto
+Ini ringkasan lengkap bug yang perlu di fix.
+
 
 ---
 
+### Bug 1 — `_scan_for_vocab` terlalu agresif
+**File yang dibutuhkan:** `core/brain.py`, `data/vocabulary.json`
 
+**Masalah:** Kata-kata umum seperti "Halo", "Tapi", "Dia", "Karena", "Sekarang" masuk ke vocabulary karena stopwords di method tidak cukup lengkap. Bukti nyata ada di `vocabulary.json` — banyak kata tidak relevan sudah tersimpan dengan `konfirmasi: false`.
 
-### 🟠 Potensi Peningkatan
-
-**1. Tidak ada mekanisme "Otto sadar konteks waktu"**
-
-Otto tahu jam (dari INTELLIGENCE config), tapi tidak punya pengetahuan tentang *hari ini Rofi sudah ngobrol berapa lama*. Jika Rofi ngobrol 2 jam non-stop, Otto tidak tau apakah ini sesi kerja, santai, atau Rofi sedang stress. `ActivityWatcher` catat per-utterance tapi tidak ada agregasi per-sesi.
-
-**2. `curiosity.py` — template pertanyaan terlalu statis**
-
-Ada 3 template per kategori, dipilih random. Setelah beberapa bulan Rofi akan dengar pertanyaan yang sama berulang. Idealnya template dirotasi berdasarkan yang *belum pernah dipakai* ke Rofi, bukan pure random.
-
-**3. Memory consolidation tidak punya batas re-konsolidasi**
-
-```python
-# consolidator.py:
-if existing and existing.get("confirmed", False):
-    continue  # skip jika sudah confirmed
-
-if existing and existing.get("value") == value:
-    continue  # skip jika value sama
-```
-
-Bagus, tapi tidak ada proteksi jika LLM hallucinate fakta yang *bertentangan* dengan fakta confirmed. Misalnya Rofi sudah konfirmasi "punya 4 cabang", lalu LLM ekstrak "punya 2 cabang" dari percakapan lain — fakta lama di-overwrite kalau `confirmed == False`.
-
-**4. `ContextTrigger` — karakter rusak di `_detect_emotion`**
-
-```python
-followup = f"Rofi, tadi kamu bilang {emotion_word}. Sekarang gimana, udah断an断 断断断断断断断断?"
-```
-
-Ada karakter Kanji rusak di kode. Meski ada versi "bersih" di bawahnya, versi rusak ini sempat di-assign dulu sebelum di-replace — tidak ada efek runtime tapi menunjukkan ada edit yang tidak bersih.
-
-**5. Tidak ada fallback jika Groq semua key down**
-
-```python
-raise RuntimeError(f"Groq gagal setelah {retries} attempt: {last_exc}")
-```
-
-Kalau semua 6 key rate-limited bersamaan, Otto crash total. Idealnya ada mode degraded — Otto bilang "Aku sedang overloaded, coba lagi dalam beberapa menit" daripada server error.
-
-**6. `server/app.py` — tidak ada rate limiting per-koneksi**
-
-Jika WebSocket client kirim audio terus-menerus tanpa tunggu respons, setiap pesan akan trigger `brain.think()` baru. Bisa jadi queue request yang menumpuk. Perlu flag `_is_processing` yang block request baru selama brain masih kerja.
-
----
-### Prioritas Fix
-
-Yang paling perlu diperbaiki segera berdasarkan dampak:
-
-
-1. Rate limiting di WebSocket — risiko server overload
+**Fix yang dibutuhkan:** Perluas STOPWORDS di `_scan_for_vocab`, tambah filter minimum panjang kata lebih ketat, dan tambah filter "harus ada huruf kapital yang tidak wajar di tengah kalimat" — bukan sekadar kapital di posisi bukan pertama.
 
 ---
 
+### Bug 2 — Pending hypothesis desync antara `curiosity` dan `pending_state`
+**File yang dibutuhkan:** `server/app.py`, `intelligence/curiosity.py`, `intelligence/pending_state.py`, `intelligence/scheduler.py`
+
+**Masalah:** `curiosity._pending_hypothesis_id` (in-memory) dan `pending_state` (disk) adalah dua sumber kebenaran yang berbeda. Scheduler cek `curiosity._pending_hypothesis_id` di `_task_curiosity_check()`, sementara `_handle_text()` cek `pending_state.get()`. Jika server restart di tengah-tengah, `curiosity._pending_hypothesis_id` di-recover dari `pending_state` di startup — tapi jika scheduler fire lebih dulu sebelum recovery selesai, bisa ada dua hipotesis aktif sekaligus.
+
+**Fix yang dibutuhkan:** Jadikan `pending_state` sebagai single source of truth. `curiosity._pending_hypothesis_id` harus selalu baca dari `pending_state.get()`, bukan simpan sendiri.
+
+---
+
+### Bug 3 — Double inject: context trigger + curiosity dalam satu response
+**File yang dibutuhkan:** `server/app.py`
+
+**Masalah:** Di `_handle_text()`, context trigger dan curiosity bisa keduanya aktif dalam satu turn. Rofi bisa dapat response seperti: `"...jawaban Otto... \n\nOh iya — tadi kamu bilang meeting jam 14. Gimana? \n\nOmong-omong — kamu biasa aktif malam hari ya?"` — dua pertanyaan sekaligus, terasa seperti interogasi.
+
+**Fix yang dibutuhkan:** Tambah prioritas — jika context trigger aktif, skip curiosity inject untuk turn ini. Atau sebaliknya. Pilih satu per response.
+
+---
+
+### Bug 4 — Short-term cache tidak di-trim setelah konsolidasi startup
+**File yang dibutuhkan:** `server/app.py`, `core/memory.py`
+
+**Masalah:** Setelah `force_consolidate()` di startup, pesan lama tetap di `_short_term` deque. Di setiap `think()` berikutnya, pesan lama itu ikut terbawa ke konteks LLM via `history = memory.get_recent_messages(limit=20)` — memboroskan token dan bisa membingungkan LLM dengan konteks sesi sebelumnya.
+
+**Fix yang dibutuhkan:** Setelah `force_consolidate()` sukses di startup, panggil `memory.clear_short_term()` untuk bersihkan cache. Data sudah aman di long-term, tidak ada yang hilang.
+
+---
+
+### Bug 5 — Silent exception di background tasks scheduler
+**File yang dibutuhkan:** `intelligence/scheduler.py`
+
+**Masalah:** Di `force_run()`, task yang exception-nya tidak ter-log karena `done_callback` tidak inspect exception. Task masuk ke "done" dengan silent error. Ini menyulitkan debugging jika `_task_curiosity_check` atau `_task_profile_analyze` gagal.
+
+**Fix yang dibutuhkan:** Tambah callback yang cek `task.exception()` dan log ke logger dengan `exc_info=True`.
+
+---
+
+### Bug 6 — `interaction_count` di `otto_model.json` tidak sinkron dengan `growth_tracker`
+**File yang dibutuhkan:** `otto_self/model.py`, `intelligence/growth_tracker.py`, `server/app.py`
+
+**Masalah:** `otto_model.json` track `interaction_count: 54` secara independen via `after_interaction()`. `growth_tracker` track `interactions` per minggu sendiri. Tidak ada titik sinkronisasi — keduanya bisa diverge. Milestone kepribadian Otto (naik layer) berbasis `interaction_count` dari model, bukan dari tracker yang lebih akurat.
+
+**Fix yang dibutuhkan:** Di `app.py`, setelah `tracker.record_interaction()`, ambil total kumulatif dari tracker dan update `interaction_count` di personality jika berbeda. Atau cukup hapus `interaction_count` dari model dan baca dari tracker saja.
+
+---
+
+Aku sudah fix 1. mari lanjutkan ke no 2. file apa yang kamu butuhkan. dan mari buat patch saja alih alih kamu menulis semuanya dari 0 buat dengan mencantumkan sebelum dan sesudah supaya dapat mudah dimengerti.
 
