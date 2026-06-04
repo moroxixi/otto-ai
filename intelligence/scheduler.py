@@ -364,15 +364,24 @@ class Scheduler:
         }
 
     def force_run(self, task_name: str) -> bool:
-        # BENAR:
         for task in self._tasks:
             if task.name == task_name:
                 t = asyncio.create_task(task.run(), name=f"otto.scheduler.force.{task_name}")
                 self._background_tasks.add(t)
-                t.add_done_callback(self._background_tasks.discard)
+
+                def _on_done(fut: asyncio.Task, _name: str = task_name) -> None:
+                    self._background_tasks.discard(fut)
+                    if not fut.cancelled() and fut.exception() is not None:
+                        logger.error(
+                            "[scheduler] force_run '%s' selesai dengan exception:",
+                            _name,
+                            exc_info=fut.exception(),
+                        )
+
+                t.add_done_callback(_on_done)
                 logger.info("[scheduler] Force run: %s", task_name)
                 return True
-        
+
         logger.warning("[scheduler] Task tidak ditemukan: %s", task_name)
         return False
 
