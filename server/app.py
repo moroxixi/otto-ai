@@ -376,15 +376,18 @@ async def _handle_text(ws: WebSocket, text: str, skip_tts: bool = False) -> None
                 asyncio.create_task(
                     watcher.log(text, intent="curiosity_response", skill="curiosity")
                 )
+            # SESUDAH
             ack = "Oke, aku catat." if verdict == "confirmed" else "Oke, aku koreksi."
             await _send_json(ws, "response", ack)
-            try:
-                await speaker.stream_to_ws(ws, ack)
-            except Exception as e:
-                # FIX BUG 2: clear active_ws jika stream gagal (client disconnect)
-                logger.warning("[ws] Stream ack gagal: %s", e)
-                if active_ws is ws:
-                    active_ws = None
+            if not skip_tts:
+                try:
+                    await speaker.stream_to_ws(ws, ack)
+                except Exception as e:
+                    logger.warning("[ws] Stream ack gagal: %s", e)
+                    if active_ws is ws:
+                        active_ws = None
+            else:
+                await ws.send_json({"type": "text_response", "text": ack})
             return
 
     history = memory.get_recent_messages(limit=20)
@@ -396,13 +399,17 @@ async def _handle_text(ws: WebSocket, text: str, skip_tts: bool = False) -> None
         )
     except asyncio.TimeoutError:
         logger.warning("[ws] Brain timeout: %s", text[:50])
+        # SESUDAH
         reply_timeout = "Maaf Rofi, aku butuh waktu lebih dari biasanya. Bisa kamu tanya lagi?"
         await _send_json(ws, "response", reply_timeout)
-        try:
-            await speaker.stream_to_ws(ws, reply_timeout)
-        except Exception:
-            if active_ws is ws:
-                active_ws = None
+        if not skip_tts:
+            try:
+                await speaker.stream_to_ws(ws, reply_timeout)
+            except Exception:
+                if active_ws is ws:
+                    active_ws = None
+        else:
+            await ws.send_json({"type": "text_response", "text": reply_timeout})
         return
     except asyncio.CancelledError:
         logger.info("[ws] Brain dibatalkan (shutdown).")
