@@ -204,6 +204,16 @@ async def growth_page():
     return {"error": "growth_history.html belum ada di server/static/"}
 
 
+
+@app.get("/write")
+async def write_page():
+    page = ROOT / "server" / "static" / "write.html"
+    if page.exists():
+        return HTMLResponse(page.read_text())
+    return {"error": "write.html belum ada di server/static/"}
+
+
+
 @app.get("/triggers")
 async def triggers_debug():
     """Debug endpoint: lihat context triggers aktif."""
@@ -274,7 +284,8 @@ async def websocket_endpoint(ws: WebSocket):
                     if msg_type == "audio":
                         await _handle_audio(ws, raw)
                     else:
-                        await _handle_text(ws, raw.get("data", "").strip())
+                        skip_tts = raw.get("mode") == "write"
+                        await _handle_text(ws, raw.get("data", "").strip(), skip_tts=skip_tts)
                 finally:
                     _is_processing = False  # selalu reset meski error
             else:
@@ -338,7 +349,8 @@ async def _handle_audio(ws: WebSocket, msg: dict) -> None:
     await _handle_text(ws, transcript)
 
 
-async def _handle_text(ws: WebSocket, text: str) -> None:
+# SESUDAH
+async def _handle_text(ws: WebSocket, text: str, skip_tts: bool = False) -> None:
     if not text:
         return
 
@@ -463,13 +475,17 @@ async def _handle_text(ws: WebSocket, text: str) -> None:
         },
     })
 
-    try:
-        await speaker.stream_to_ws(ws, reply)
-    except Exception as e:
-        # FIX BUG 2: clear active_ws jika stream gagal (client disconnect di tengah TTS)
-        logger.warning("[ws] Stream TTS gagal: %s", e)
-        if active_ws is ws:
-            active_ws = None
+    # SESUDAH
+    if not skip_tts:
+        try:
+            await speaker.stream_to_ws(ws, reply)
+        except Exception as e:
+            logger.warning("[ws] Stream TTS gagal: %s", e)
+            if active_ws is ws:
+                active_ws = None
+    else:
+        # Write mode: kirim teks saja, tanpa audio
+        await ws.send_json({"type": "text_response", "text": reply})
 
 
 async def _send_json(ws: WebSocket, msg_type: str, data: str) -> None:

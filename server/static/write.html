@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Otto — Write</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Rajdhani:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/write.css">
+</head>
+<body>
+
+<div class="deco-corner"></div>
+
+<!-- ── Header ── -->
+<div id="header">
+  <div id="ws-status">
+    <div class="dot"></div>
+    <span>connecting</span>
+  </div>
+
+  <div id="header-title">OTTO</div>
+
+  <a href="/" id="header-nav">🎙 suara</a>
+</div>
+
+<!-- ── Orb Section ── -->
+<div id="orb-section">
+  <canvas id="orb-canvas"></canvas>
+  <div id="orb-label"></div>
+</div>
+
+<!-- ── Chat Area ── -->
+<div id="chat-area">
+  <div id="chat-empty">
+    <p>Hei, Rofi.</p>
+    <span>tulis sesuatu untuk memulai</span>
+  </div>
+</div>
+
+<!-- ── Input Bar ── -->
+<div id="input-bar">
+  <a href="/" id="btn-voice" title="Mode Suara">🎙</a>
+  <textarea
+    id="msg-input"
+    placeholder="Tulis pesan..."
+    rows="1"
+    autocomplete="off"
+    autocorrect="off"
+    spellcheck="false"
+  ></textarea>
+  <button id="btn-send" title="Kirim (Enter)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13"></line>
+      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+    </svg>
+  </button>
+</div>
+
+<div id="input-status"></div>
+
+<script src="/static/write.js"></script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 ╔══════════════════════════════════════════════════════════════════╗
-Generated  : 2026-06-04 23:08  |  .py: 4708  |  .json: 46
+Generated  : 2026-06-06 18:55  |  .py: 4709  |  .json: 46
 ║                    OTTO-AI — CONTEXT FILE                        ║
 ║           Lampirkan file ini di awal setiap chat baru            ║
 ╚══════════════════════════════════════════════════════════════════╝
@@ -75,50 +75,50 @@ Paralel (diam-diam):
 
 
 [ CORE ]
-  core/brain.py                            ✓  486 baris  (3j lalu)
-  core/config.py                           ✓  139 baris  (38j lalu)
-  core/__init__.py                         ✓    0 baris  (150j lalu)
-  core/memory.py                           ✓  494 baris  (30j lalu)
-  core/speaker.py                          ✓  272 baris  (57j lalu)
-  core/transcriber.py                      ✓  107 baris  (33j lalu)
-  core/vocabulary.py                       ✓  242 baris  (51j lalu)
+  core/brain.py                            ✓  486 baris  (47j lalu)
+  core/config.py                           ✓  139 baris  (82j lalu)
+  core/__init__.py                         ✓    0 baris  (194j lalu)
+  core/memory.py                           ✓  494 baris  (74j lalu)
+  core/speaker.py                          ✓  272 baris  (101j lalu)
+  core/transcriber.py                      ✓  107 baris  (77j lalu)
+  core/vocabulary.py                       ✓  242 baris  (95j lalu)
 
 [ SERVER ]
-  server/app.py                            ✓  526 baris  (3j lalu)
-  server/__init__.py                       ✓    0 baris  (150j lalu)
+  server/app.py                            ✓  542 baris  (0j lalu)
+  server/__init__.py                       ✓    0 baris  (194j lalu)
 
 [ SKILLS ]
   (belum ada file)
 
 [ INTELLIGENCE ]
-  intelligence/activity_watcher.py         ✓  430 baris  (145j lalu)
-  intelligence/consolidator.py             ✓  624 baris  (0j lalu)
-  intelligence/context_triggers.py         ✓  539 baris  (25j lalu)
-  intelligence/conversation_scanner.py     ✓  643 baris  (25j lalu)
-  intelligence/curiosity.py                ✓  559 baris  (11j lalu)
-  intelligence/growth_tracker.py           ✓  615 baris  (33j lalu)
-  intelligence/__init__.py                 ✓    0 baris  (150j lalu)
-  intelligence/pending_state.py            ✓  161 baris  (102j lalu)
-  intelligence/profiler.py                 ✓  541 baris  (0j lalu)
-  intelligence/scheduler.py                ✓  468 baris  (11j lalu)
+  intelligence/activity_watcher.py         ✓  430 baris  (189j lalu)
+  intelligence/consolidator.py             ✓  624 baris  (43j lalu)
+  intelligence/context_triggers.py         ✓  539 baris  (69j lalu)
+  intelligence/conversation_scanner.py     ✓  643 baris  (69j lalu)
+  intelligence/curiosity.py                ✓  559 baris  (55j lalu)
+  intelligence/growth_tracker.py           ✓  615 baris  (77j lalu)
+  intelligence/__init__.py                 ✓    0 baris  (194j lalu)
+  intelligence/pending_state.py            ✓  161 baris  (146j lalu)
+  intelligence/profiler.py                 ✓  541 baris  (43j lalu)
+  intelligence/scheduler.py                ✓  468 baris  (54j lalu)
 
 [ SELF ]
-  otto_self/github_checker.py              ✓  424 baris  (124j lalu)
-  otto_self/__init__.py                    ✓    0 baris  (134j lalu)
-  otto_self/model.py                       ✓  394 baris  (3j lalu)
-  otto_self/otto_model.json                ✓   16 baris  (3j lalu)
+  otto_self/github_checker.py              ✓  424 baris  (168j lalu)
+  otto_self/__init__.py                    ✓    0 baris  (178j lalu)
+  otto_self/model.py                       ✓  394 baris  (47j lalu)
+  otto_self/otto_model.json                ✓   16 baris  (47j lalu)
 
 [ DATA ]
-  data/activity_summary.json               ✓  632 baris  (3j lalu)
-  data/consolidation_state.json            ✓    5 baris  (3j lalu)
-  data/context_triggers.json               ✓   82 baris  (3j lalu)
-  data/curiosity_pending.json              ✓    4 baris  (3j lalu)
-  data/curiosity_state.json                ✓    8 baris  (3j lalu)
-  data/hypotheses.json                     ✓   73 baris  (3j lalu)
-  data/memory.json                         ✓  145 baris  (3j lalu)
-  data/memory_relations.json               ✓  192 baris  (5j lalu)
-  data/short_term_cache.json               ✓  101 baris  (2j lalu)
-  data/vocabulary.json                     ✓   21 baris  (0j lalu)
+  data/activity_summary.json               ✓  632 baris  (47j lalu)
+  data/consolidation_state.json            ✓    5 baris  (47j lalu)
+  data/context_triggers.json               ✓   82 baris  (47j lalu)
+  data/curiosity_pending.json              ✓    4 baris  (47j lalu)
+  data/curiosity_state.json                ✓    8 baris  (47j lalu)
+  data/hypotheses.json                     ✓   61 baris  (43j lalu)
+  data/memory.json                         ✓  145 baris  (47j lalu)
+  data/memory_relations.json               ✓  192 baris  (49j lalu)
+  data/short_term_cache.json               ✓  101 baris  (46j lalu)
+  data/vocabulary.json                     ✓   21 baris  (43j lalu)
 
 ━━━ STRUKTUR FOLDER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [4.0K]  /data/asd/otto-ai
@@ -143,7 +143,7 @@ Paralel (diam-diam):
 │   ├── [ 160]  crash.log
 │   ├── [  60]  curiosity_pending.json
 │   ├── [ 144]  curiosity_state.json
-│   ├── [2.1K]  hypotheses.json
+│   ├── [1.7K]  hypotheses.json
 │   ├── [4.3K]  memory.json
 │   ├── [6.9K]  memory_relations.json
 │   ├── [ 276]  README.md
@@ -177,18 +177,43 @@ Paralel (diam-diam):
 │   │   │           └── [ 14K]  main
 │   │   └── [ 15K]  HEAD
 │   ├── [4.0K]  objects
+│   │   ├── [4.0K]  00
+│   │   │   └── [7.9K]  d7cbee7dc2750551fba065422acbb1a68a3eff
 │   │   ├── [4.0K]  0f
 │   │   │   └── [ 371]  0646336eb40701deafd888874f351675f0124c
+│   │   ├── [4.0K]  1f
+│   │   │   └── [ 249]  8c8212b56edb76867f8c678e5cdb967354473e
+│   │   ├── [4.0K]  2d
+│   │   │   └── [ 251]  45d6cd557ef6e62dbb4f78d73599cfe3f63743
 │   │   ├── [4.0K]  39
 │   │   │   └── [ 83K]  c0fc3e0da50beb4cc9106c313bd68dd9b79452
+│   │   ├── [4.0K]  3e
+│   │   │   ├── [3.7K]  4c3afce71206f8e56dce9df765b380601bf807
+│   │   │   └── [ 369]  52bad78060721216b6653d17c58d991430eb04
+│   │   ├── [4.0K]  40
+│   │   │   └── [ 412]  af79f50f852b420e25d5086a2d9488325a5940
+│   │   ├── [4.0K]  62
+│   │   │   └── [6.5K]  b40d54f432ab7273e617c002eb27f99d3fc9dd
+│   │   ├── [4.0K]  6c
+│   │   │   └── [ 194]  b9595d6b14c99547a860c2abd9f9b40e514000
+│   │   ├── [4.0K]  92
+│   │   │   └── [ 268]  3dc866f1809ad9fe0641249f5fdd70c0d8490b
+│   │   ├── [4.0K]  95
+│   │   │   └── [ 83K]  6d9f51d53768d0933352b6a5dffdf802ea753b
 │   │   ├── [4.0K]  a3
 │   │   │   └── [ 175]  5a38c299cd0ab04fa6ef5b72c60d402f6a4b5e
+│   │   ├── [4.0K]  a9
+│   │   │   └── [3.5K]  d3d4947820bb7edaec249088fc6ecb4da5096c
+│   │   ├── [4.0K]  b1
+│   │   │   └── [ 982]  43db1f536dd627f20d4c328cb41864fbbd7eba
 │   │   ├── [4.0K]  c6
 │   │   │   └── [6.1K]  ec4dee24e4f610b191012ed53f33f4da12e27f
 │   │   ├── [4.0K]  c9
 │   │   │   └── [3.6K]  0ed85ad869d18bb7bcee1809d37b84f5d2bcfd
 │   │   ├── [4.0K]  d0
 │   │   │   └── [ 151]  1a7549765aa1bc742452720cc7bba22ec46ce5
+│   │   ├── [4.0K]  f8
+│   │   │   └── [ 175]  566832f056ba73ba3cc1b209974caad6ac95b1
 │   │   ├── [4.0K]  info
 │   │   │   └── [ 107]  packs
 │   │   └── [4.0K]  pack
@@ -233,15 +258,20 @@ Paralel (diam-diam):
 │   ├── [ 420]  otto_model.json
 │   └── [ 162]  README.md
 ├── [4.0K]  scripts
+│   ├── [ 309]  clean_hypothesis.py
 │   ├── [8.0K]  generate_tree.sh
 │   ├── [1.7K]  otto-crash-notify.sh
 │   ├── [3.3K]  otto-push.sh
 │   ├── [1.3K]  otto-restart-notify.sh
+│   ├── [ 942]  otto.service
 │   └── [5.5K]  setup_structure.sh
 ├── [4.0K]  server
 │   ├── [4.0K]  static
 │   │   ├── [ 26K]  growth_history.html
-│   │   └── [ 40K]  index.html
+│   │   ├── [ 40K]  index.html
+│   │   ├── [ 13K]  write.css
+│   │   ├── [1.7K]  write.html
+│   │   └── [ 17K]  write.js
 │   ├── [ 18K]  app.py
 │   ├── [   0]  __init__.py
 │   └── [ 205]  README.md
@@ -8874,12 +8904,11 @@ Paralel (diam-diam):
 │   │   └── [ 27M]  voices-v1.0.bin.1
 │   ├── [   0]  id_ID-ardan-medium.onnx.json
 │   └── [4.9K]  id_ID-news_tts-medium.onnx.json
+├── [4.2K]  catatan.txt
 ├── [ 514]  .env
 ├── [1.9K]  .gitignore
 ├── [6.2K]  otto_for_claude.txt
-├── [ 32K]  otto.log
-├── [ 942]  otto.service
-└── [4.2K]  text.txt
+└── [ 32K]  otto.log
 
 ━━━ CARA PAKAI FILE INI ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
