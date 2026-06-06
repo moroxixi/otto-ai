@@ -151,8 +151,14 @@ class Curiosity:
 
     # ── Public API ────────────────────────────────────────────────────────────
 
-    async def try_ask(self) -> tuple[Optional[str], Optional[str]]:
+    async def try_ask(
+        self,
+        response_text: str = "",
+        user_text: str = "",
+    ) -> tuple[Optional[str], Optional[str]]:
         if not self._is_good_time():
+            return None, None
+        if not self._is_good_context(response_text, user_text):
             return None, None
 
         hypothesis = self._pick_hypothesis()        # ← assign dulu (fix bug 1a)
@@ -421,6 +427,51 @@ class Curiosity:
                 )
                 return False
 
+        return True
+
+
+
+    # Kata kunci mood — tidak hardcode fakta Rofi, hanya sinyal emosi universal
+    _EMOTIONAL_HIGH_SIGNALS = [
+        "berhasil", "senang", "bangga", "akhirnya", "yeay", "hore",
+        "sukses", "alhamdulillah", "mantap", "luar biasa", "keren",
+    ]
+    _EMOTIONAL_SENSITIVE_SIGNALS = [
+        "capek", "lelah", "susah", "sedih", "galau", "stress", "berat",
+        "masalah", "khawatir", "takut", "bingung", "pusing", "marah",
+    ]
+    
+    def _is_good_context(self, response_text: str, user_text: str) -> bool:
+        """
+        Periksa apakah konteks percakapan saat ini layak untuk disisipkan
+        pertanyaan curiosity.
+    
+        Kriteria TOLAK:
+          1. Respons Otto sudah mengandung tanda tanya (pertanyaan natural)
+          2. Pesan Rofi mengandung sinyal emosi tinggi (senang/sedih)
+          3. Respons Otto sendiri sudah panjang + emosional (Otto sudah fokus di topik itu)
+        """
+        # Kriteria 1 — respons sudah ada pertanyaan natural
+        question_count = response_text.count("?")
+        if question_count >= 1:
+            logger.debug("[curiosity] context-check: respons sudah ada '?' — skip inject.")
+            return False
+    
+        # Kriteria 2 — mood user tinggi (sedang curhat / sedang euforia)
+        user_lower = user_text.lower()
+        if any(s in user_lower for s in _EMOTIONAL_HIGH_SIGNALS):
+            logger.debug("[curiosity] context-check: emotional_high detected — skip inject.")
+            return False
+        if any(s in user_lower for s in _EMOTIONAL_SENSITIVE_SIGNALS):
+            logger.debug("[curiosity] context-check: emotional_sensitive detected — skip inject.")
+            return False
+    
+        # Kriteria 3 — respons Otto terlalu panjang (kemungkinan topik berat/dalam)
+        # Jika respons > 300 karakter, Otto sudah "terlibat penuh" — jangan ganggu
+        if len(response_text) > 300:
+            logger.debug("[curiosity] context-check: respons terlalu panjang (%d char) — skip.", len(response_text))
+            return False
+    
         return True
 
     # ── Persistensi State ─────────────────────────────────────────────────────

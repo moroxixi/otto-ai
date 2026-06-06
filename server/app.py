@@ -251,9 +251,9 @@ async def websocket_endpoint(ws: WebSocket):
     client = ws.client.host if ws.client else "unknown"
     logger.info("[ws] Client terhubung: %s", client)
 
-    await _send_json(ws, "response", "Otto aktif. Hei Rofi, apa ada yang ingin kamu ceritakan?")
+    await _send_json(ws, "response", "Otto aktif. Hei Rofi, mari kita lanjutkan percakapannya.")
     try:
-        await speaker.stream_to_ws(ws, "Otto aktif. Hei Rofi, apa ada yang ingin kamu ceritakan?")
+        await speaker.stream_to_ws(ws, "Otto aktif. Hei Rofi, mari kita lanjutkan percakapannya.")
     except Exception as e:
         logger.warning("[ws] Stream salam gagal: %s", e)
 
@@ -456,7 +456,10 @@ async def _handle_text(ws: WebSocket, text: str, skip_tts: bool = False) -> None
     if curiosity and not pending_state.get() and not context_triggered:
         try:
             async with _curiosity_lock:
-                question, hyp_id = await curiosity.try_ask()
+                question, hyp_id = await curiosity.try_ask(
+                    response_text=resp.text,
+                    user_text=text,
+                )
             if question and hyp_id:
                 reply = reply + f"\n\nOmong-omong — {question}"
                 injected_hyp_id = hyp_id
@@ -473,17 +476,16 @@ async def _handle_text(ws: WebSocket, text: str, skip_tts: bool = False) -> None
             watcher.log(text, intent="chat", skill=skill_tag)
         )
 
-    await ws.send_json({
-        "type": "response",
-        "data": reply,
-        "meta": {
-            "intent": "chat",
-            "skill":  "curiosity" if injected_hyp_id else "",
-        },
-    })
-
     # SESUDAH
     if not skip_tts:
+        await ws.send_json({
+            "type": "response",
+            "data": reply,
+            "meta": {
+                "intent": "chat",
+                "skill":  "curiosity" if injected_hyp_id else "",
+            },
+        })
         try:
             await speaker.stream_to_ws(ws, reply)
         except Exception as e:
@@ -491,7 +493,6 @@ async def _handle_text(ws: WebSocket, text: str, skip_tts: bool = False) -> None
             if active_ws is ws:
                 active_ws = None
     else:
-        # Write mode: kirim teks saja, tanpa audio
         await ws.send_json({"type": "text_response", "text": reply})
 
 

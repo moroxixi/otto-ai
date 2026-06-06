@@ -67,15 +67,43 @@
     }
   },
   {
-    "id": "8e84dd5e",
+    "id": "87d9b838",
     "trigger_type": "emotion",
-    "original_text": "Ya betul seperti itu, tapi kalau aku tidak bilang ulangi, maksudku kalau aku tidak bilang ulangi, ka",
-    "followup_message": "Hei Rofi, tadi kamu bilang mantap — cerita dong!",
-    "due_at": 1780577667.381048,
-    "created_at": 1780577367.3814628,
-    "status": "active",
+    "original_text": "Otto bertanya satu-satu, aku bingung menjawabnya. coba ulangi responmu dan mulai dengan satu per sat",
+    "followup_message": "Gimana sekarang, masih ngerasa bingung?",
+    "due_at": 1780749454.9108949,
+    "created_at": 1780747654.9109948,
+    "status": "done",
     "context": {
-      "emotion": "mantap",
+      "emotion": "bingung",
+      "valence": "negative",
+      "max_age_hours": 2
+    }
+  },
+  {
+    "id": "33b80632",
+    "trigger_type": "emotion",
+    "original_text": "jangan lupa ya, nanya satu persatu. jangan sampai terulang lagi seperti itu otto. Mengernai perasaan",
+    "followup_message": "Hei Rofi, tadi kamu bilang senang — cerita dong!",
+    "due_at": 1780750922.7391806,
+    "created_at": 1780750622.7393765,
+    "status": "done",
+    "context": {
+      "emotion": "senang",
+      "valence": "positive",
+      "max_age_hours": 1
+    }
+  },
+  {
+    "id": "c344ac9f",
+    "trigger_type": "emotion",
+    "original_text": "otto apakah kamu tahu, aku baru saja menemukan dan mempraktekan ideku. jadi anakku ini mulai rewel k",
+    "followup_message": "Wah, ada kabar baik nih kayaknya? Tadi kamu kedengeran senang.",
+    "due_at": 1780751471.9995916,
+    "created_at": 1780751171.999873,
+    "status": "done",
+    "context": {
+      "emotion": "senang",
       "valence": "positive",
       "max_age_hours": 1
     }

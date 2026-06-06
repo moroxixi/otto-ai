@@ -154,14 +154,14 @@
   "tidur_larut_produktif_malam": {
     "id": "tidur_larut_produktif_malam",
     "from_facts": [
-      "rofi.kebiasaan.mandiri",
-      "rofi.jadwal.kegiatan"
+      "rofi.kebiasaan.makan",
+      "rofi.preferensi.minuman"
     ],
     "relation_type": "inferred",
-    "description": "Rofi tidur larut, kemungkinan tidak efektif dalam menjalankan jadwal kegiatan",
-    "implication": "Pastikan Rofi memiliki waktu istirahat yang cukup sebelum menjalankan jadwal kegiatan",
-    "confidence": 0.7,
-    "created_at": 1780570047.1918263,
+    "description": "Rofi makan berdua dan minum kopi oat setiap pagi, kemungkinan memiliki kebiasaan rutin",
+    "implication": "Otto harus mengikuti Jadwal Rofi, termasuk pagi hari",
+    "confidence": 0.8,
+    "created_at": 1780747304.6796622,
     "confirmed_at": null
   },
   "mengantar_barang_ke_teman": {
@@ -188,6 +188,69 @@
     "implication": "Otto mungkin perlu memantau kesehatan anak Rofi secara lebih ketat",
     "confidence": 0.85,
     "created_at": 1780570047.1957798,
+    "confirmed_at": null
+  },
+  "karakter_kompeten": {
+    "id": "karakter_kompeten",
+    "from_facts": [
+      "rofi.karakter.pemahaman",
+      "rofi.karakter.pengalaman"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki pemahaman yang biasa dan pengalaman yang luas, menunjukkan kompetensi",
+    "implication": "Otto harus lebih percaya diri dalam berdiskusi dengan Rofi",
+    "confidence": 0.9,
+    "created_at": 1780747304.6814473,
+    "confirmed_at": null
+  },
+  "salat_magrib_haritak": {
+    "id": "salat_magrib_haritak",
+    "from_facts": [
+      "rofi.jadwal.salat",
+      "rofi.kesehatan.agama"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi salat Maghrib dan memiliki komitmen terhadap ibadah, menunjukkan kebiasaan harita",
+    "implication": "Otto harus menghormati dan mendukung kebiasaan harita Rofi",
+    "confidence": 0.7,
+    "created_at": 1780747304.6974125,
+    "confirmed_at": null
+  },
+  "preferensi_kopi_oat": {
+    "id": "preferensi_kopi_oat",
+    "from_facts": [
+      "rofi.preferensi.minuman"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki preferensi minuman kopi dan oat, mungkin karena kebiasaan pagi",
+    "implication": "Tawarkan minuman kopi atau oat pada pagi hari",
+    "confidence": 0.85,
+    "created_at": 1780750698.3995085,
+    "confirmed_at": null
+  },
+  "kebiasaan_makan_beli_kedua": {
+    "id": "kebiasaan_makan_beli_kedua",
+    "from_facts": [
+      "rofi.kebiasaan.makan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki kebiasaan membeli makanan secara berurutan, mungkin karena preferensi kenyamanan",
+    "implication": "Tawarkan makanan yang lebih kenyaman dan terorganisir",
+    "confidence": 0.8,
+    "created_at": 1780750698.401571,
+    "confirmed_at": null
+  },
+  "mood_bingung_kemampuan_selektif": {
+    "id": "mood_bingung_kemampuan_selektif",
+    "from_facts": [
+      "rofi.mood.last_negative",
+      "rofi.karakter.kemampuan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki kemampuan selektif, tapi kadang mengalami mood negatif, mungkin karena kelebihan beban",
+    "implication": "Tanyakan Rofi untuk prioritas tugasnya pada saat mood negatif",
+    "confidence": 0.7,
+    "created_at": 1780750698.4031317,
     "confirmed_at": null
   }
 }
