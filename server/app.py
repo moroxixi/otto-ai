@@ -13,6 +13,7 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 import signal
+from fastapi.responses import Response
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -233,6 +234,13 @@ async def triggers_debug():
             for t in engine.get_active_triggers()
         ],
     }
+
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    return Response(status_code=204) 
+
 
 
 @app.websocket("/ws")

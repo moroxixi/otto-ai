@@ -154,14 +154,14 @@
   "tidur_larut_produktif_malam": {
     "id": "tidur_larut_produktif_malam",
     "from_facts": [
-      "rofi.kebiasaan.makan",
-      "rofi.preferensi.minuman"
+      "rofi.kebiasaan.tidur",
+      "rofi.preferensi.hidupan_sosial"
     ],
     "relation_type": "inferred",
-    "description": "Rofi makan berdua dan minum kopi oat setiap pagi, kemungkinan memiliki kebiasaan rutin",
-    "implication": "Otto harus mengikuti Jadwal Rofi, termasuk pagi hari",
+    "description": "Rofi tidur larut, kemungkinan karena aktif menulis di malam hari",
+    "implication": "Kirim reminder penting antara jam 20-22, bukan pagi hari",
     "confidence": 0.8,
-    "created_at": 1780747304.6796622,
+    "created_at": 1780753040.3624125,
     "confirmed_at": null
   },
   "mengantar_barang_ke_teman": {
@@ -251,6 +251,32 @@
     "implication": "Tanyakan Rofi untuk prioritas tugasnya pada saat mood negatif",
     "confidence": 0.7,
     "created_at": 1780750698.4031317,
+    "confirmed_at": null
+  },
+  "tidur_larut_gejala_kebiasaan": {
+    "id": "tidur_larut_gejala_kebiasaan",
+    "from_facts": [
+      "rofi.kebiasaan.tidur",
+      "rofi.kebiasaan.makan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki kebiasaan tidur larut dan beli makanan dua kali",
+    "implication": "Ketika Rofi tidur larut, mungkin sebaiknya dia tidak makan terlalu banyak",
+    "confidence": 0.7,
+    "created_at": 1780753040.3989105,
+    "confirmed_at": null
+  },
+  "pengetahuan_filsafat": {
+    "id": "pengetahuan_filsafat",
+    "from_facts": [
+      "rofi.karakter.pemahaman",
+      "rofi.karakter.pengalaman"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki pengetahuan tentang filosofi dan pengalaman bisnis",
+    "implication": "Otto sebaiknya tidak membahas topik bisnis dengan Rofi saat dia sedang sibuk",
+    "confidence": 0.9,
+    "created_at": 1780753040.4647348,
     "confirmed_at": null
   }
 }

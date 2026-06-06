@@ -7,11 +7,11 @@
   "layer_2_threshold": 10,
   "layer_3_threshold": 50,
   "rofi_communication_style": {
-    "avg_response_length": 206.2,
+    "avg_response_length": 207.8,
     "tends_to_elaborate": true,
-    "correction_rate": 0.266,
+    "correction_rate": 0.248,
     "preferred_question_style": "direct",
-    "sample_count": 90
+    "sample_count": 96
   },
-  "interaction_count": 108
+  "interaction_count": 111
 }
