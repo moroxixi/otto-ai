@@ -459,10 +459,10 @@ class Curiosity:
     
         # Kriteria 2 — mood user tinggi (sedang curhat / sedang euforia)
         user_lower = user_text.lower()
-        if any(s in user_lower for s in _EMOTIONAL_HIGH_SIGNALS):
+        if any(s in user_lower for s in self._EMOTIONAL_HIGH_SIGNALS):
             logger.debug("[curiosity] context-check: emotional_high detected — skip inject.")
             return False
-        if any(s in user_lower for s in _EMOTIONAL_SENSITIVE_SIGNALS):
+        if any(s in user_lower for s in self._EMOTIONAL_SENSITIVE_SIGNALS):
             logger.debug("[curiosity] context-check: emotional_sensitive detected — skip inject.")
             return False
     
