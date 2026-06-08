@@ -151,18 +151,16 @@ class Curiosity:
 
     # ── Public API ────────────────────────────────────────────────────────────
 
-    async def try_ask(
-        self,
-        response_text: str = "",
-        user_text: str = "",
-    ) -> tuple[Optional[str], Optional[str]]:
+    # AFTER — try_ask()
+    async def try_ask(self, response_text: str = "", user_text: str = "") -> tuple[Optional[str], Optional[str]]:
         if not self._is_good_time():
             return None, None
-        if not self._is_good_context(response_text, user_text):
-            return None, None
-
-        hypothesis = self._pick_hypothesis()        # ← assign dulu (fix bug 1a)
+    
+        hypothesis = self._pick_hypothesis()
         if hypothesis is None:
+            return None, None
+    
+        if not self._is_good_context(response_text, user_text, hypothesis=hypothesis):
             return None, None
 
         question = self._generate_question(hypothesis)
@@ -441,7 +439,7 @@ class Curiosity:
         "masalah", "khawatir", "takut", "bingung", "pusing", "marah",
     ]
     
-    def _is_good_context(self, response_text: str, user_text: str) -> bool:
+    def _is_good_context(self, response_text: str, user_text: str, hypothesis=None) -> bool:
         """
         Periksa apakah konteks percakapan saat ini layak untuk disisipkan
         pertanyaan curiosity.
@@ -476,7 +474,7 @@ class Curiosity:
             return False
 
         # Guard baru: hipotesis harus relevan dengan topik percakapan sekarang
-        candidate = self._pick_hypothesis()
+        candidate = hypothesis or self._pick_hypothesis()
         if candidate and not self._is_hypothesis_relevant(candidate, user_text):
             logger.debug("[curiosity] context-check: hipotesis '%s' tidak relevan dengan topik sekarang — skip.", candidate.claim[:40])
             return False
