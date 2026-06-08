@@ -175,7 +175,6 @@ class Brain:
             asyncio.create_task(self._log_to_memory(user_text, text))
             asyncio.create_task(self._scan_conversation(user_text, text))
             asyncio.create_task(self._consolidator.maybe_consolidate())
-            asyncio.create_task(self._evolve_personality("normal", user_text=user_text))
             asyncio.create_task(self._scan_for_vocab(user_text))
             asyncio.create_task(self.check_context_triggers(user_text, text))
             return resp
@@ -241,8 +240,8 @@ class Brain:
         asyncio.create_task(self._log_to_memory(user_text, combined))
         asyncio.create_task(self._scan_conversation(user_text, combined))
         asyncio.create_task(self._consolidator.maybe_consolidate())
-        asyncio.create_task(self._evolve_personality("normal", user_text=user_text))
         asyncio.create_task(self.check_context_triggers(user_text, combined))
+        asyncio.create_task(self._scan_for_vocab(user_text))
 
 
     async def close(self) -> None:

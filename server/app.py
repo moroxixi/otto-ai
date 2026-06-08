@@ -539,6 +539,9 @@ async def _broadcast_curiosity(question: str) -> None:
 
 async def _broadcast_curiosity_with_pending(question: str, hyp_id: str) -> None:
     pending_state.set(hyp_id)
+    # Sync juga in-memory state di curiosity agar handle_response() bisa jalan
+    if curiosity:
+        curiosity._pending_hypothesis_id = hyp_id
     await _broadcast_curiosity(question)
 
 

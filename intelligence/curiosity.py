@@ -610,12 +610,17 @@ if __name__ == "__main__":
                     print(f"  ✗ REJECTED: {h.claim}")
 
     async def _test():
-        # Override path untuk test
-        
         PATHS["curiosity_state"] = Path("/tmp/otto_curiosity_state.json")
 
         profiler  = MockProfiler()
-        curiosity = Curiosity(profiler)
+        
+        # Curiosity butuh (profiler, memory) — gunakan MemoryManager mock sederhana
+        class MockMemory:
+            def remember(self, key, value, source="manual"):
+                print(f"  [memory] remember({key}={value}, source={source})")
+                return True
+        
+        curiosity = Curiosity(profiler, MockMemory()) 
 
         print("\n=== TRY ASK ===")
         # Force waktu aman untuk test

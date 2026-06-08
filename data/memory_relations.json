@@ -553,10 +553,10 @@
       "rofi.preferensi.minuman"
     ],
     "relation_type": "inferred",
-    "description": "Rofi minum kopi oat setiap pagi",
-    "implication": "Kirim pesan pagi hari untuk memastikan Rofi telah minum kopi oat",
-    "confidence": 0.9,
-    "created_at": 1780939251.357138,
+    "description": "Rofi suka kopi oat setiap pagi",
+    "implication": "Buat daftar belanja kopi oat untuk Rofi",
+    "confidence": 0.6,
+    "created_at": 1780939806.8438416,
     "confirmed_at": null
   },
   "aqiqah_istri_dan_stres": {
@@ -570,6 +570,31 @@
     "implication": "Jangan kirim reminder penting saat Rofi sedang melakukan aqiqah atau sebelumnya",
     "confidence": 0.7,
     "created_at": 1780939251.3591032,
+    "confirmed_at": null
+  },
+  "tidur_larut_mungkin_produktif": {
+    "id": "tidur_larut_mungkin_produktif",
+    "from_facts": [
+      "rofi.kebiasaan.tidur"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi tidak disebutkan tidur, mungkin aktif di malam hari",
+    "implication": "Kirim reminder penting antara jam 20-22, bukan pagi hari",
+    "confidence": 0.7,
+    "created_at": 1780939806.842061,
+    "confirmed_at": null
+  },
+  "rofi_stres_perlu_perhatian": {
+    "id": "rofi_stres_perlu_perhatian",
+    "from_facts": [
+      "rofi.kesehatan.stres",
+      "rofi.kesehatan.overthinking"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi sering stres dan overthinking, perlu perhatian dan dukungan",
+    "implication": "Tanya Rofi apakah ada masalah pribadi yang perlu dibicarakan",
+    "confidence": 0.8,
+    "created_at": 1780939806.842803,
     "confirmed_at": null
   }
 }

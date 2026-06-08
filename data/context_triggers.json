@@ -135,5 +135,19 @@
       "valence": "negative",
       "max_age_hours": 2
     }
+  },
+  {
+    "id": "6585031e",
+    "trigger_type": "emotion",
+    "original_text": "yaa ada soal pertanyaanmu diatas, Oh iya — Eh Rofi, masih kesal? Mau cerita nggak? itu kan kurang en",
+    "followup_message": "Hei Rofi — udah mendingan dari tadi yang kesal?",
+    "due_at": 1780942018.5726814,
+    "created_at": 1780940218.5736527,
+    "status": "active",
+    "context": {
+      "emotion": "kesal",
+      "valence": "negative",
+      "max_age_hours": 2
+    }
   }
 ]
