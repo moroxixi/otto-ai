@@ -391,5 +391,82 @@
     "confidence": 0.85,
     "created_at": 1780919314.1185348,
     "confirmed_at": null
+  },
+  "mudah_mengantuk_tidak_produktif": {
+    "id": "mudah_mengantuk_tidak_produktif",
+    "from_facts": [
+      "rofi.kebiasaan.mengantuk"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi mudah mengantuk, kemungkinan tidak produktif",
+    "implication": "Pastikan Rofi tidak mengantuk saat melakukan tugas penting",
+    "confidence": 0.8,
+    "created_at": 1780919874.5895038,
+    "confirmed_at": null
+  },
+  "badan_lemas_tidak_nyaman": {
+    "id": "badan_lemas_tidak_nyaman",
+    "from_facts": [
+      "rofi.kesehatan kondisi_fisik"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki problem kesehatan fisik, dapat menyebabkan tidak nyaman",
+    "implication": "Periksa kondisi kesehatan Rofi secara teratur untuk memastikan tidak ada masalah",
+    "confidence": 0.7,
+    "created_at": 1780919874.5915377,
+    "confirmed_at": null
+  },
+  "kesal_mudah_mengantuk": {
+    "id": "kesal_mudah_mengantuk",
+    "from_facts": [
+      "rofi.mood.last_negative",
+      "rofi.kebiasaan.mengantuk"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi kesal dan mudah mengantuk, dapat mempengaruhi emosi",
+    "implication": "Ketika Rofi kesal, pastikan dia tidak melakukan kegiatan yang membutuhkan perhatian penuh",
+    "confidence": 0.85,
+    "created_at": 1780919874.5931814,
+    "confirmed_at": null
+  },
+  "keuangan_terkuras_buka_cabang_baru": {
+    "id": "keuangan_terkuras_buka_cabang_baru",
+    "from_facts": [
+      "rofi.keuangan.status",
+      "rofi.rencana.bisnis"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi keuangan terkuras, tapi masih berniat buka cabang baru",
+    "implication": "Otto harus bantu Rofi mencari investor atau strategi finansial yang efektif",
+    "confidence": 0.8,
+    "created_at": 1780920585.7846315,
+    "confirmed_at": null
+  },
+  "menikah_hamil_beli_makanan_kedua": {
+    "id": "menikah_hamil_beli_makanan_kedua",
+    "from_facts": [
+      "rofi.pernikahan.status",
+      "rofi.istri.status",
+      "rofi.kebiasaan.belanjamakanan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi menikah, istri hamil, dan suka beli makanan kedua",
+    "implication": "Otto harus mengingatkan Rofi untuk memilih makanan yang lebih seimbang",
+    "confidence": 0.7,
+    "created_at": 1780920585.7869291,
+    "confirmed_at": null
+  },
+  "mudah_mengantuk_operator": {
+    "id": "mudah_mengantuk_operator",
+    "from_facts": [
+      "rofi.kebiasaan.tidur",
+      "rofi.pekerjaan.posisi"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi mudah mengantuk, tapi masih bekerja sebagai operator",
+    "implication": "Otto harus mengatur jadwal kerja Rofi agar tidak terlalu lelah",
+    "confidence": 0.9,
+    "created_at": 1780920585.7902699,
+    "confirmed_at": null
   }
 }

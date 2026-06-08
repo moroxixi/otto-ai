@@ -2,20 +2,107 @@
   "version": 1,
   "alias": {},
   "istilah": [
-    {"kata": "Bidan", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-02T21:24"},
-    {"kata": "Kartini", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-02T21:24"},
-    {"kata": "Musa", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-02T21:28"},
-    {"kata": "Abdullah", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-02T21:28"},
-    {"kata": "Moroalmora", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-02T21:28"},
-    {"kata": "Allah", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-02T21:28"},
-    {"kata": "Mohamad", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-02T21:28"},
-    {"kata": "Rofi", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-02T21:28"},
-    {"kata": "Alwani", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-02T21:28"},
-    {"kata": "Mona", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-02T21:28"},
-    {"kata": "Rahmawati", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-02T21:28"},
-    {"kata": "Otto", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-02T21:47"},
-    {"kata": "Coffee", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-03T19:57"},
-    {"kata": "Point", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-03T22:01"},
-    {"kata": "Indomie", "sumber": "otto", "konfirmasi": true, "ditambah": "2026-06-03T22:16"}
-]
+    {
+      "kata": "Bidan",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-02T21:24"
+    },
+    {
+      "kata": "Kartini",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-02T21:24"
+    },
+    {
+      "kata": "Musa",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-02T21:28"
+    },
+    {
+      "kata": "Abdullah",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-02T21:28"
+    },
+    {
+      "kata": "Moroalmora",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-02T21:28"
+    },
+    {
+      "kata": "Allah",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-02T21:28"
+    },
+    {
+      "kata": "Mohamad",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-02T21:28"
+    },
+    {
+      "kata": "Rofi",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-02T21:28"
+    },
+    {
+      "kata": "Alwani",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-02T21:28"
+    },
+    {
+      "kata": "Mona",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-02T21:28"
+    },
+    {
+      "kata": "Rahmawati",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-02T21:28"
+    },
+    {
+      "kata": "Otto",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-02T21:47"
+    },
+    {
+      "kata": "Coffee",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-03T19:57"
+    },
+    {
+      "kata": "Point",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-03T22:01"
+    },
+    {
+      "kata": "Indomie",
+      "sumber": "otto",
+      "konfirmasi": true,
+      "ditambah": "2026-06-03T22:16"
+    },
+    {
+      "kata": "Tempura",
+      "sumber": "otto",
+      "konfirmasi": false,
+      "ditambah": "2026-06-08T19:03"
+    },
+    {
+      "kata": "Wonton",
+      "sumber": "otto",
+      "konfirmasi": false,
+      "ditambah": "2026-06-08T19:03"
+    }
+  ]
 }

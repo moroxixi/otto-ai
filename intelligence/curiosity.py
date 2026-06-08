@@ -457,14 +457,12 @@ class Curiosity:
             logger.debug("[curiosity] context-check: respons sudah ada '?' — skip inject.")
             return False
 
-        # TAMBAHAN: respons Otto sudah mode empati → jangan inject curiosity
         _EMPATHY_SIGNALS = ["maaf", "capek", "lelah", "stres", "sedih", "semangat", "istirahat"]
         response_lower = response_text.lower()
         if any(s in response_lower for s in _EMPATHY_SIGNALS):
             logger.debug("[curiosity] context-check: empathy mode detected — skip inject.")
             return False
-    
-        # Kriteria 2 — mood user tinggi (sedang curhat / sedang euforia)
+
         user_lower = user_text.lower()
         if any(s in user_lower for s in self._EMOTIONAL_HIGH_SIGNALS):
             logger.debug("[curiosity] context-check: emotional_high detected — skip inject.")
@@ -472,11 +470,49 @@ class Curiosity:
         if any(s in user_lower for s in self._EMOTIONAL_SENSITIVE_SIGNALS):
             logger.debug("[curiosity] context-check: emotional_sensitive detected — skip inject.")
             return False
-    
-        # Kriteria 3 — respons Otto terlalu panjang (kemungkinan topik berat/dalam)
-        # Jika respons > 300 karakter, Otto sudah "terlibat penuh" — jangan ganggu
+
         if len(response_text) > 300:
             logger.debug("[curiosity] context-check: respons terlalu panjang (%d char) — skip.", len(response_text))
+            return False
+
+        # Guard baru: hipotesis harus relevan dengan topik percakapan sekarang
+        candidate = self._pick_hypothesis()
+        if candidate and not self._is_hypothesis_relevant(candidate, user_text):
+            logger.debug("[curiosity] context-check: hipotesis '%s' tidak relevan dengan topik sekarang — skip.", candidate.claim[:40])
+            return False
+
+        return True
+
+
+
+    # TAMBAH method baru — letakkan setelah _is_good_context()
+
+    def _is_hypothesis_relevant(self, hypothesis, user_text: str) -> bool:
+        """
+        Cek apakah hipotesis masih relevan dengan konteks percakapan saat ini.
+        Mencegah pertanyaan emosi/mood muncul saat topik sudah berganti ke hal teknis/netral.
+        """
+        TECHNICAL_SIGNALS = [
+            "coding", "kode", "koding", "program", "server", "bug", "error",
+            "aplikasi", "python", "api", "database", "deploy", "proyek",
+            "project", "teknis", "fitur", "sistem", "script", "backend",
+            "frontend", "framework", "git", "linux",
+        ]
+    
+        EMOTIONAL_CLAIM_SIGNALS = [
+            "kesal", "sedih", "capek", "lelah", "stres", "marah",
+            "mood", "perasaan", "frustrasi", "kecewa", "galau",
+        ]
+    
+        # Kalau hipotesis menyangkut emosi/mood Rofi
+        # tapi topik percakapan sekarang teknis — tidak relevan
+        claim_lower = hypothesis.claim.lower()
+        user_lower  = user_text.lower()
+    
+        is_emotional_hypothesis = any(s in claim_lower for s in EMOTIONAL_CLAIM_SIGNALS)
+        is_technical_context    = any(s in user_lower  for s in TECHNICAL_SIGNALS)
+    
+        if is_emotional_hypothesis and is_technical_context:
             return False
     
         return True

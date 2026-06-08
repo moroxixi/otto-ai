@@ -129,7 +129,7 @@
     "followup_message": "Eh Rofi, masih kesal? Mau cerita nggak?",
     "due_at": 1780921262.5849447,
     "created_at": 1780919462.5852203,
-    "status": "active",
+    "status": "done",
     "context": {
       "emotion": "kesal",
       "valence": "negative",
