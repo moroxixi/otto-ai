@@ -533,5 +533,43 @@
     "confidence": 0.8,
     "created_at": 1780938508.2323775,
     "confirmed_at": null
+  },
+  "istri_lahirkan_stres_positif": {
+    "id": "istri_lahirkan_stres_positif",
+    "from_facts": [
+      "rofi.kesehatan",
+      "rofi.kesehatan.stres"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi merasa stres positif saat istri melahirkan",
+    "implication": "Ketika Rofi merasa stres, tanya dulu soal kondisi istri atau keluarga",
+    "confidence": 0.8,
+    "created_at": 1780939251.2302754,
+    "confirmed_at": null
+  },
+  "rofi_kopi_oat_setiap_pagi": {
+    "id": "rofi_kopi_oat_setiap_pagi",
+    "from_facts": [
+      "rofi.preferensi.minuman"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi minum kopi oat setiap pagi",
+    "implication": "Kirim pesan pagi hari untuk memastikan Rofi telah minum kopi oat",
+    "confidence": 0.9,
+    "created_at": 1780939251.357138,
+    "confirmed_at": null
+  },
+  "aqiqah_istri_dan_stres": {
+    "id": "aqiqah_istri_dan_stres",
+    "from_facts": [
+      "rofi.kesehatan.aqiqah",
+      "rofi.kesehatan.stres"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi akan melakukan aqiqah istri dan mungkin merasa stres",
+    "implication": "Jangan kirim reminder penting saat Rofi sedang melakukan aqiqah atau sebelumnya",
+    "confidence": 0.7,
+    "created_at": 1780939251.3591032,
+    "confirmed_at": null
   }
 }

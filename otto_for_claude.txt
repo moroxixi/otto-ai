@@ -1,5 +1,5 @@
 ╔══════════════════════════════════════════════════════════════════╗
-Generated  : 2026-06-09 00:16  |  .py: 4709  |  .json: 46
+Generated  : 2026-06-09 00:23  |  .py: 4710  |  .json: 46
 ║                    OTTO-AI — CONTEXT FILE                        ║
 ║           Lampirkan file ini di awal setiap chat baru            ║
 ╚══════════════════════════════════════════════════════════════════╝
@@ -93,10 +93,10 @@ Paralel (diam-diam):
 [ INTELLIGENCE ]
   intelligence/activity_watcher.py         ✓  430 baris  (242j lalu)
   intelligence/consolidator.py             ✓  624 baris  (97j lalu)
-  intelligence/context_triggers.py         ✓  539 baris  (122j lalu)
+  intelligence/context_triggers.py         ✓  539 baris  (123j lalu)
   intelligence/conversation_scanner.py     ✓  644 baris  (5j lalu)
   intelligence/curiosity.py                ✓  651 baris  (0j lalu)
-  intelligence/growth_tracker.py           ✓  617 baris  (0j lalu)
+  intelligence/growth_tracker.py           ✓  618 baris  (0j lalu)
   intelligence/__init__.py                 ✓    0 baris  (247j lalu)
   intelligence/pending_state.py            ✓  161 baris  (199j lalu)
   intelligence/profiler.py                 ✓  541 baris  (97j lalu)
@@ -115,8 +115,8 @@ Paralel (diam-diam):
   data/curiosity_pending.json              ✓    4 baris  (53j lalu)
   data/curiosity_state.json                ✓   11 baris  (53j lalu)
   data/hypotheses.json                     ✓  325 baris  (0j lalu)
-  data/memory.json                         ✓  295 baris  (0j lalu)
-  data/memory_relations.json               ✓  536 baris  (0j lalu)
+  data/memory.json                         ✓  319 baris  (0j lalu)
+  data/memory_relations.json               ✓  574 baris  (0j lalu)
   data/short_term_cache.json               ✓  101 baris  (0j lalu)
   data/vocabulary.json                     ✓  107 baris  (5j lalu)
 
@@ -146,8 +146,8 @@ Paralel (diam-diam):
 │   ├── [  60]  curiosity_pending.json
 │   ├── [ 178]  curiosity_state.json
 │   ├── [9.4K]  hypotheses.json
-│   ├── [8.7K]  memory.json
-│   ├── [ 19K]  memory_relations.json
+│   ├── [9.4K]  memory.json
+│   ├── [ 20K]  memory_relations.json
 │   ├── [ 276]  README.md
 │   ├── [6.0K]  short_term_cache.json
 │   └── [2.1K]  vocabulary.json
@@ -185,6 +185,8 @@ Paralel (diam-diam):
 │   │   │   └── [7.9K]  d7cbee7dc2750551fba065422acbb1a68a3eff
 │   │   ├── [4.0K]  08
 │   │   │   └── [ 174]  09fe7d903927d665dc9069cdde0db336baea0c
+│   │   ├── [4.0K]  0a
+│   │   │   └── [7.7K]  b105ae85483ad981fea693eb44c3bcc92c4804
 │   │   ├── [4.0K]  0b
 │   │   │   └── [3.7K]  6ce0849bafdc66c6ffa2383b55ab29ae8c841f
 │   │   ├── [4.0K]  0c
@@ -237,6 +239,8 @@ Paralel (diam-diam):
 │   │   │   └── [7.8K]  6fc493c5c42fd1bb22a8e3e83a5d701904eca1
 │   │   ├── [4.0K]  33
 │   │   │   └── [ 249]  6283544569140e1739d9ec7568b632d911cb92
+│   │   ├── [4.0K]  35
+│   │   │   └── [ 180]  6fba10d7c43a3f5e55d762ca3048d01f26a942
 │   │   ├── [4.0K]  36
 │   │   │   ├── [ 438]  ccf63053341eeff7f69615d51074d4ff5f9689
 │   │   │   └── [6.5K]  f58f5e2b806b66fce642793c65d56da53a2cad
@@ -307,6 +311,8 @@ Paralel (diam-diam):
 │   │   │   └── [ 194]  b9595d6b14c99547a860c2abd9f9b40e514000
 │   │   ├── [4.0K]  71
 │   │   │   └── [ 194]  d94b9833cc49524eede047b251a8f386124acc
+│   │   ├── [4.0K]  72
+│   │   │   └── [4.0K]  e0b4b7fadca064706a6484c08f41758b780917
 │   │   ├── [4.0K]  77
 │   │   │   └── [ 86K]  9eb7ab35106d8db87d7d25f9d2aa855282ac62
 │   │   ├── [4.0K]  78
@@ -326,13 +332,15 @@ Paralel (diam-diam):
 │   │   ├── [4.0K]  8a
 │   │   │   └── [ 172]  f1880ed404cf1e409b4e09258d51a28ed26fa4
 │   │   ├── [4.0K]  8d
-│   │   │   └── [ 281]  48c83ad25db34eee206b67250c37b882245f80
+│   │   │   ├── [ 281]  48c83ad25db34eee206b67250c37b882245f80
+│   │   │   └── [ 89K]  ac2afe0c1e9d102382a8508a160282f0be6e62
 │   │   ├── [4.0K]  90
 │   │   │   └── [3.8K]  99a50824124f19e039ae8f2c8090e07bd5797b
 │   │   ├── [4.0K]  92
 │   │   │   ├── [ 171]  14bb06d7f0cdf8f720c075088315198c5b578f
 │   │   │   ├── [3.8K]  15362ce1656844df04a9492d45931272a7e1c2
-│   │   │   └── [ 268]  3dc866f1809ad9fe0641249f5fdd70c0d8490b
+│   │   │   ├── [ 268]  3dc866f1809ad9fe0641249f5fdd70c0d8490b
+│   │   │   └── [ 341]  6602e7085dead2bc82a4ff425decf83573d449
 │   │   ├── [4.0K]  94
 │   │   │   └── [7.6K]  d1cd2b96184b10412f40e9685efb78fe3964b1
 │   │   ├── [4.0K]  95
@@ -410,7 +418,8 @@ Paralel (diam-diam):
 │   │   ├── [4.0K]  f4
 │   │   │   └── [ 88K]  390bd7eb13dabbf701c320e224133327cb94bc
 │   │   ├── [4.0K]  f5
-│   │   │   └── [3.7K]  9025d2a2f1d572624c90cc3ccf49c32829b52a
+│   │   │   ├── [3.7K]  9025d2a2f1d572624c90cc3ccf49c32829b52a
+│   │   │   └── [ 176]  e3c947d5fbd000452d13160e8fb938827a5fcf
 │   │   ├── [4.0K]  f6
 │   │   │   └── [3.9K]  c0c08adf8a85a2807ea00695f4f02245b5e9a0
 │   │   ├── [4.0K]  f7
@@ -418,7 +427,8 @@ Paralel (diam-diam):
 │   │   ├── [4.0K]  f8
 │   │   │   └── [ 175]  566832f056ba73ba3cc1b209974caad6ac95b1
 │   │   ├── [4.0K]  fb
-│   │   │   └── [ 84K]  408fe5ad8bdf549e637214dad886704e4c538c
+│   │   │   ├── [ 84K]  408fe5ad8bdf549e637214dad886704e4c538c
+│   │   │   └── [ 151]  9d696fc3e17f6f1d0eadc4e402f9651bfaf7b0
 │   │   ├── [4.0K]  fe
 │   │   │   └── [ 151]  1261a352c17e3d712f440eeb5e9eafbca3e805
 │   │   ├── [4.0K]  info
@@ -469,6 +479,7 @@ Paralel (diam-diam):
 │   └── [ 162]  README.md
 ├── [4.0K]  scripts
 │   ├── [ 309]  clean_hypothesis.py
+│   ├── [ 466]  fix_cumulative.py
 │   ├── [8.0K]  generate_tree.sh
 │   ├── [1.7K]  otto-crash-notify.sh
 │   ├── [3.3K]  otto-push.sh

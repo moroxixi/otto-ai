@@ -533,6 +533,7 @@ class GrowthTracker:
         try:
             data = dict(self._current)
             data["skills_used"] = list(self._known_skills)
+            data["cumulative_total"] = self._get_cumulative_total()
             CURRENT_FILE.write_text(
                 json.dumps(data, ensure_ascii=False, indent=2)
             )
