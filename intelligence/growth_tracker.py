@@ -334,7 +334,7 @@ class GrowthTracker:
             "milestone":         milestone_name,
             "milestone_desc":    milestone_desc,
             "current_week":      current,
-            "weekly_history":    weekly_growth,
+            "weekly_history":    history,         # ← pakai history langsung, field lengkap
             "all_weeks":         history,
             "best_week":         max(history, key=lambda w: w["score_total"], default=None),
             "total_weeks_active": len(history) + 1,

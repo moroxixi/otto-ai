@@ -636,6 +636,7 @@ function render(data) {
         const weekCum = week.cumulative_total ?? 0;
         const delta = weekCum - prevCum;
         const deltaStr = isNaN(delta) ? '—' : (delta >= 0 ? `+${delta}` : `${delta}`);
+		const deltaClass = isNaN(delta) ? '' : (delta < 0 ? 'minus' : '');
         return `<div class="week-row">
           <div class="week-badge">
             <div class="week-badge-num">W</div>
