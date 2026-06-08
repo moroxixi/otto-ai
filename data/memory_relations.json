@@ -155,13 +155,13 @@
     "id": "tidur_larut_produktif_malam",
     "from_facts": [
       "rofi.kebiasaan.tidur",
-      "rofi.preferensi.hidupan_sosial"
+      "rofi.produktif.waktu"
     ],
     "relation_type": "inferred",
-    "description": "Rofi tidur larut, kemungkinan karena aktif menulis di malam hari",
+    "description": "Rofi tidur larut, kemungkinan produktif di malam hari",
     "implication": "Kirim reminder penting antara jam 20-22, bukan pagi hari",
-    "confidence": 0.8,
-    "created_at": 1780753040.3624125,
+    "confidence": 0.75,
+    "created_at": 1780903753.9709952,
     "confirmed_at": null
   },
   "mengantar_barang_ke_teman": {
@@ -234,10 +234,10 @@
       "rofi.kebiasaan.makan"
     ],
     "relation_type": "inferred",
-    "description": "Rofi memiliki kebiasaan membeli makanan secara berurutan, mungkin karena preferensi kenyamanan",
-    "implication": "Tawarkan makanan yang lebih kenyaman dan terorganisir",
-    "confidence": 0.8,
-    "created_at": 1780750698.401571,
+    "description": "Rofi memiliki kebiasaan membeli dua kali",
+    "implication": "Saran: untuk mengurangi pengeluaran, dapat mengajak Rofi untuk membeli dengan lebih hati-hati",
+    "confidence": 0.7,
+    "created_at": 1780848317.6124368,
     "confirmed_at": null
   },
   "mood_bingung_kemampuan_selektif": {
@@ -277,6 +277,81 @@
     "implication": "Otto sebaiknya tidak membahas topik bisnis dengan Rofi saat dia sedang sibuk",
     "confidence": 0.9,
     "created_at": 1780753040.4647348,
+    "confirmed_at": null
+  },
+  "preferensi_minuman_kopi": {
+    "id": "preferensi_minuman_kopi",
+    "from_facts": [
+      "rofi.preferensi.minuman"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi suka minum kopi oat setiap pagi",
+    "implication": "Saran: untuk meningkatkan kenyamanan Rofi, dapat membelikan atau menyajikan kopi oat",
+    "confidence": 0.9,
+    "created_at": 1780848317.5950525,
+    "confirmed_at": null
+  },
+  "pengalaman_dalam_bisnis": {
+    "id": "pengalaman_dalam_bisnis",
+    "from_facts": [
+      "rofi.karakter.pengalaman"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki pengalaman dalam bisnis, pengelolaan uang, investasi, dan filosofi",
+    "implication": "Saran: untuk memanfaatkan pengetahuan Rofi, dapat meminta saran atau bantuan dalam hal bisnis",
+    "confidence": 0.8,
+    "created_at": 1780848317.6131704,
+    "confirmed_at": null
+  },
+  "tenggorokan_bergolak_saat_makan": {
+    "id": "tenggorokan_bergolak_saat_makan",
+    "from_facts": [
+      "rofi.kebiasaan.tidur",
+      "rofi.kesehatan.bayi.tenggorokan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki kesehatan tenggorokan yang mungkin berdahak",
+    "implication": "Jika tahu jadwal makan Rofi, coba konsultasikan pengobatan tenggorokan",
+    "confidence": 0.8,
+    "created_at": 1780849284.9092848,
+    "confirmed_at": null
+  },
+  "kebiasaan_mengkonsumsi_kopi": {
+    "id": "kebiasaan_mengkonsumsi_kopi",
+    "from_facts": [
+      "rofi.preferensi.minuman"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki kebiasaan mengkonsumsi kopi setiap pagi",
+    "implication": "Ketika Rofi perlu motivasi, tawarkan kopi sebagai minuman pilihan",
+    "confidence": 0.7,
+    "created_at": 1780849284.923997,
+    "confirmed_at": null
+  },
+  "rofi_stress_setelah_sedih": {
+    "id": "rofi_stress_setelah_sedih",
+    "from_facts": [
+      "rofi.mood.last_negative",
+      "rofi.kebiasaan.tidur"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi sedih kemungkinan membuat Rofi tidak tidur nyaman",
+    "implication": "Jangan menghubungi Rofi jika Rofi sedang dalam keadaan sedih",
+    "confidence": 0.7,
+    "created_at": 1780903753.9717722,
+    "confirmed_at": null
+  },
+  "rofi_aktif_senang": {
+    "id": "rofi_aktif_senang",
+    "from_facts": [
+      "rofi.mood.last_positive",
+      "rofi.preferensi.hidupan_sosial"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi senang kemungkinan membuat Rofi lebih aktif secara sosial",
+    "implication": "Kirim pesan untuk menghubungi Rofi jika Rofi sedang senang",
+    "confidence": 0.8,
+    "created_at": 1780903753.9724975,
     "confirmed_at": null
   }
 }

@@ -107,5 +107,19 @@
       "valence": "positive",
       "max_age_hours": 1
     }
+  },
+  {
+    "id": "e8e32c39",
+    "trigger_type": "emotion",
+    "original_text": "pernah beberapa kali tapi tidak setiap saat kulakukan. aku tahu bahwa menulis merupakan salah satu p",
+    "followup_message": "Hei Rofi — udah mendingan dari tadi yang stres?",
+    "due_at": 1780919422.6861312,
+    "created_at": 1780917622.6875818,
+    "status": "active",
+    "context": {
+      "emotion": "stres",
+      "valence": "negative",
+      "max_age_hours": 2
+    }
   }
 ]

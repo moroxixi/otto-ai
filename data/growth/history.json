@@ -89,5 +89,585 @@
         "ts": "2026-05-31T17:04:46"
       }
     ]
+  },
+  {
+    "week_number": 23,
+    "year": 2026,
+    "start_date": "2026-06-01",
+    "end_date": "2026-06-08",
+    "locked": true,
+    "score_knowledge": 0,
+    "score_capability": 0,
+    "score_depth": 1215,
+    "score_total": 1215,
+    "cumulative_total": 1322,
+    "interactions": 108,
+    "active_days": 0,
+    "hypotheses_made": 0,
+    "facts_confirmed": 0,
+    "skills_used": [],
+    "deep_conversations": 78,
+    "errors": 0,
+    "code_updates": 0,
+    "otto_note": "Minggu ke-23: Minggu yang sibuk dan produktif. 0 hari penuh interaksi. 78 percakapan yang cukup dalam.",
+    "events": [
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-01T13:26:10"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-01T15:19:39"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-01T15:21:48"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-01T15:23:14"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-01T15:55:31"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-01T16:02:48"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-01T16:07:47"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-01T16:21:23"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-01T16:23:36"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-01T16:40:42"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-01T16:42:28"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-01T18:49:27"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-01T18:51:10"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-01T19:12:04"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-01T19:13:59"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-02T12:29:10"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-02T12:31:52"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T12:34:11"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-02T13:30:49"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T13:52:17"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T13:53:14"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T13:54:03"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-02T13:54:49"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T13:55:49"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T13:56:45"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T13:58:17"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-02T13:59:23"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T14:10:31"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-02T18:43:32"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T18:44:35"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T18:45:34"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T18:46:36"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T18:47:56"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-02T18:49:46"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T18:51:04"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T18:54:26"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T19:35:32"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T21:23:12"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T21:24:04"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T21:25:11"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T21:28:24"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T21:39:06"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-02T21:40:22"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-02T21:43:04"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-02T21:45:36"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-02T21:47:45"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-03T11:24:11"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-03T11:26:36"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-03T11:28:38"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-03T11:29:55"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-03T11:31:10"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-03T11:41:43"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-03T11:45:05"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-03T19:57:43"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-03T21:59:38"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-03T22:01:33"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-03T22:09:28"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-03T22:12:18"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-03T22:14:46"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-03T22:16:31"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T12:10:05"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-04T12:17:29"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T12:18:44"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-04T12:19:28"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T12:20:35"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-04T12:46:11"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T12:47:49"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T16:11:44"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-04T16:14:50"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T17:47:24"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T17:48:33"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T17:49:57"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T18:15:17"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T18:16:50"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-04T18:17:44"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T18:19:15"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T18:23:30"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T18:25:32"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T18:28:16"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T18:29:29"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T18:30:30"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-04T18:31:17"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T18:32:15"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-04T19:26:39"
+      },
+      {
+        "type": "proactive_question",
+        "score": 6,
+        "ts": "2026-06-04T19:26:39",
+        "question": "Aku penasaran soal sesuatu. biasa aja. Itu tepat nggak?"
+      },
+      {
+        "type": "correction_accepted",
+        "score": 3,
+        "ts": "2026-06-04T19:27:37"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T19:28:39"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T19:30:20"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T19:32:36"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T19:35:11"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T19:37:35"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T19:46:44"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T19:49:27"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T19:51:32"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-04T19:52:44"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-06T19:05:22"
+      },
+      {
+        "type": "proactive_question",
+        "score": 6,
+        "ts": "2026-06-06T19:05:22",
+        "question": "Rofi, boleh aku tanya satu hal? komitmen terhadap ibadah — b"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-06T19:07:34"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-06T19:57:01"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-06T20:01:47"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-06T20:06:11"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-06T20:14:51"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-06T20:38:44"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-06T20:40:58"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-06T23:48:48"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-07T00:19:13"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-07T00:20:05"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-07T00:25:21"
+      },
+      {
+        "type": "active_day",
+        "score": 1,
+        "ts": "2026-06-07T23:23:47"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-07T23:26:28"
+      },
+      {
+        "type": "deep_conversation",
+        "score": 15,
+        "ts": "2026-06-07T23:29:00"
+      }
+    ]
   }
 ]

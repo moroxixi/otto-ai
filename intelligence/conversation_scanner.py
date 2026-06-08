@@ -564,31 +564,27 @@ class ConversationScanner:
 
         return hits
 
+    # AFTER
     def _inject_hits(self, hits: list[SignalHit]) -> None:
-        from intelligence.profiler import Hypothesis
-
         for hit in hits:
-            hyp = Hypothesis(
-                category   = hit.category,
-                claim      = hit.claim,
-                evidence   = hit.evidence,
-                confidence = hit.confidence,
-                status     = "pending",
-            )
-
-            # Pakai method public — biarkan profiler yang handle duplikat & save
-            injected = self._profiler.inject_hypothesis(hyp)
-
+            fact = {
+                "key":        f"rofi.{hit.category}.{hit.rule_id}",
+                "value":      hit.claim.replace("Rofi ", "", 1),
+                "confidence": hit.confidence,
+            }
+    
+            injected = self._profiler.inject_hypothesis(fact)
+    
             if injected:
                 logger.info(
                     "[scanner] → inject hipotesis baru [%s] %.0f%%: %s",
-                    hyp.category, hyp.confidence * 100, hyp.claim,
+                    hit.category, hit.confidence * 100, hit.claim,
                 )
             else:
                 logger.debug(
                     "[scanner] Skip duplikat (ditangani profiler): '%s'", hit.claim
                 )
-
+    
 # ─────────────────────────── Quick Test ──────────────────────────────────────
 
 if __name__ == "__main__":
