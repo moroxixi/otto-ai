@@ -632,10 +632,10 @@ function render(data) {
         </div>
       ` : [...weekly_history].reverse().map((week, idx, arr) => {
         const prevWeek = arr[idx + 1];
-        const prevCum = prevWeek ? prevWeek.cumulative_total : 0;
-        const delta = week.cumulative_total - prevCum;
-        const deltaStr = delta >= 0 ? `+${delta}` : `${delta}`;
-        const deltaClass = delta < 0 ? 'minus' : '';
+        const prevCum = (prevWeek && prevWeek.cumulative_total != null) ? prevWeek.cumulative_total : 0;
+        const weekCum = week.cumulative_total ?? 0;
+        const delta = weekCum - prevCum;
+        const deltaStr = isNaN(delta) ? '—' : (delta >= 0 ? `+${delta}` : `${delta}`);
         return `<div class="week-row">
           <div class="week-badge">
             <div class="week-badge-num">W</div>
@@ -669,8 +669,8 @@ function render(data) {
     if (current_week) labels.push(`W${current_week.week_number}*`);
     const dataScores = weekly_history.map(w => w.score_total);
     if (current_week) dataScores.push(current_week.score_total);
-    const dataCumul = weekly_history.map(w => w.cumulative_total);
-    if (current_week) dataCumul.push(data.cumulative_total);
+    const dataCumul = weekly_history.map(w => w.cumulative_total ?? null);
+    if (current_week) dataCumul.push(data.cumulative_total ?? null);
 
     new Chart(document.getElementById('growth-chart'), {
       type: 'bar',
