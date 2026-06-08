@@ -456,6 +456,13 @@ class Curiosity:
         if question_count >= 1:
             logger.debug("[curiosity] context-check: respons sudah ada '?' — skip inject.")
             return False
+
+        # TAMBAHAN: respons Otto sudah mode empati → jangan inject curiosity
+        _EMPATHY_SIGNALS = ["maaf", "capek", "lelah", "stres", "sedih", "semangat", "istirahat"]
+        response_lower = response_text.lower()
+        if any(s in response_lower for s in _EMPATHY_SIGNALS):
+            logger.debug("[curiosity] context-check: empathy mode detected — skip inject.")
+            return False
     
         # Kriteria 2 — mood user tinggi (sedang curhat / sedang euforia)
         user_lower = user_text.lower()

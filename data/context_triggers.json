@@ -115,9 +115,23 @@
     "followup_message": "Hei Rofi — udah mendingan dari tadi yang stres?",
     "due_at": 1780919422.6861312,
     "created_at": 1780917622.6875818,
-    "status": "active",
+    "status": "done",
     "context": {
       "emotion": "stres",
+      "valence": "negative",
+      "max_age_hours": 2
+    }
+  },
+  {
+    "id": "00f98669",
+    "trigger_type": "emotion",
+    "original_text": "eeeittss satu satu otto. jangan tanya banyak banyak. kabarku baik. aku baru ingat hari ini aku cukup",
+    "followup_message": "Eh Rofi, masih kesal? Mau cerita nggak?",
+    "due_at": 1780921262.5849447,
+    "created_at": 1780919462.5852203,
+    "status": "active",
+    "context": {
+      "emotion": "kesal",
       "valence": "negative",
       "max_age_hours": 2
     }

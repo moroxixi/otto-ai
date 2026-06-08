@@ -353,5 +353,43 @@
     "confidence": 0.8,
     "created_at": 1780903753.9724975,
     "confirmed_at": null
+  },
+  "stres_tenggorokan_bayi": {
+    "id": "stres_tenggorokan_bayi",
+    "from_facts": [
+      "rofi.mood.last_negative",
+      "rofi.kesehatan.tenggorokan_bayi"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi sering merasa stres dan memiliki bayi dengan tenggorokan yang berdahak",
+    "implication": "Periksa kesehatan bayi Rofi lebih sering dan berikan konseling stres",
+    "confidence": 0.8,
+    "created_at": 1780919314.114172,
+    "confirmed_at": null
+  },
+  "preference_makan": {
+    "id": "preference_makan",
+    "from_facts": [
+      "rofi.preferensi.minuman",
+      "rofi.jadwal.waktu_makan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi suka minum kopi oat, tetapi jadwal makan tidak diketahui",
+    "implication": "Tanya Rofi tentang jadwal makan sebelum menawarkan makanan atau minuman",
+    "confidence": 0.7,
+    "created_at": 1780919314.1162853,
+    "confirmed_at": null
+  },
+  "penyebab_tidur_kurang_nyaman": {
+    "id": "penyebab_tidur_kurang_nyaman",
+    "from_facts": [
+      "rofi.kebiasaan.tidur"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi tidur kurang nyaman",
+    "implication": "Tanya Rofi tentang kebiasaan tidurnya dan coba saran untuk perbaiki kenyamanan tidur",
+    "confidence": 0.85,
+    "created_at": 1780919314.1185348,
+    "confirmed_at": null
   }
 }
