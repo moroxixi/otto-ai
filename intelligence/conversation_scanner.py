@@ -599,7 +599,7 @@ if __name__ == "__main__":
             return self._hypotheses
 
         def get_pending(self):
-            return [h for h in self._hypotheses if h.status == "pending"]
+            return [h for h in self._hypotheses if h.get("status") == "pending"]
 
         # AFTER
         def inject_hypothesis(self, fact: dict):
