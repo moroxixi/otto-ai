@@ -601,9 +601,13 @@ if __name__ == "__main__":
         def get_pending(self):
             return [h for h in self._hypotheses if h.status == "pending"]
 
-        def inject_hypothesis(self, hyp):
-            if hyp.claim not in {h.claim for h in self._hypotheses}:
-                self._hypotheses.append(hyp)
+        # AFTER
+        def inject_hypothesis(self, fact: dict):
+            claim = f"Rofi {fact.get('value', '')}"
+            if claim not in {h.get("claim", "") for h in self._hypotheses}:
+                self._hypotheses.append({"claim": claim, "status": "pending",
+                                          "category": fact.get("key", "").split(".")[1] if "." in fact.get("key","") else "preference",
+                                          "confidence": fact.get("confidence", 0.5)})
                 return True
             return False
 
@@ -633,7 +637,8 @@ if __name__ == "__main__":
             total_hits += len(hits)
 
         print(f"\n=== TOTAL: {total_hits} sinyal, {len(profiler.get_pending())} hipotesis diinjeksi ===")
+        # AFTER
         for h in profiler.get_pending():
-            print(f"  [{h.category}] {h.confidence:.0%} — {h.claim}")
+            print(f"  [{h['category']}] {h['confidence']:.0%} — {h['claim']}")
 
     asyncio.run(_test())
