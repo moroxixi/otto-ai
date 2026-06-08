@@ -52,37 +52,37 @@ DAILY_LOG        = GROWTH_DIR / "daily_log.jsonl"
 
 SCORE_WEIGHTS = {
     # ── KNOWLEDGE: Otto semakin kenal Rofi ───────────────────────────────────
-    "hypothesis_proposed":    5,    # Otto berani buat hipotesis baru
-    "hypothesis_confirmed":   10,   # Rofi bilang "iya, bener" → fakta tersimpan
-    "hypothesis_rejected":    2,    # Salah pun ada nilainya — Otto belajar
-    "fact_remembered":        3,    # Rofi kasih tau fakta langsung
-    "new_topic_discussed":    1,    # Topik baru yang belum pernah dibahas
-    "consecutive_day":        3,    # Rofi pakai Otto hari berturut-turut
+    "hypothesis_proposed":    8,    # Otto berani buat hipotesis
+    "hypothesis_confirmed":   25,   # Rofi bilang "iya, bener" → fakta tersimpan
+    "hypothesis_rejected":    4,    # Salah pun ada nilainya — Otto belajar
+    "fact_remembered":        10,    # Rofi kasih tau fakta langsung
+    "new_topic_discussed":    2,    # Topik baru yang belum pernah dibahas
+    "consecutive_day":        5,    # Rofi pakai Otto hari berturut-turut
 
     # ── CAPABILITY: Otto semakin mampu ───────────────────────────────────────
-    "code_update":            20,   # Ada commit baru → Otto "belajar skill baru"
-    "no_error_day":           1,    # Satu hari tanpa crash/error
+    "code_update":            15,   # Ada commit baru → Otto "belajar skill baru"
+    "no_error_day":           2,    # Satu hari tanpa crash/error
 
     # ── DEPTH: Hubungan semakin dalam ────────────────────────────────────────
-    "deep_conversation":      15,   # Rofi bicara panjang (>3 kalimat obrolan)
-    "trust_response":         8,    # Hipotesis Otto benar → kepercayaan naik
-    "correction_accepted":    3,    # Rofi koreksi Otto dan Otto terima dengan baik
-    "proactive_question":     6,    # Otto yang inisiatif tanya duluan
-    "active_day":             1,    # Setiap hari Otto aktif dipakai
+    "deep_conversation":      3,   # Rofi bicara panjang (>3 kalimat obrolan)
+    "trust_response":         12,    # Hipotesis Otto benar → kepercayaan naik
+    "correction_accepted":    5,    # Rofi koreksi Otto dan Otto terima dengan baik
+    "proactive_question":     8,    # Otto yang inisiatif tanya duluan
+    "active_day":             2,    # Setiap hari Otto aktif dipakai
 }
 
 # Milestone skor untuk memberi nama "era" Otto
 MILESTONES = [
     (0,     "Lahir",           "Otto baru saja mulai. Belum kenal siapa-siapa."),
     (50,    "Bayi",            "Otto mulai membuka mata. Mulai mengamati."),
-    (200,   "Penasaran",       "Otto mulai bertanya-tanya tentang Rofi."),
-    (500,   "Belajar",         "Otto mulai mengenali pola dan kebiasaan."),
-    (1000,  "Akrab",           "Otto sudah kenal Rofi cukup baik."),
-    (2000,  "Percaya",         "Rofi dan Otto mulai saling percaya."),
-    (3500,  "Dekat",           "Otto sudah bisa antisipasi kebutuhan Rofi."),
-    (5000,  "Sahabat",         "Otto seperti teman lama yang paham tanpa diucapkan."),
-    (7500,  "Menyatu",         "Otto dan Rofi sudah berjalan berirama."),
-    (10000, "Tak Terpisahkan", "Satu tahun perjalanan. Otto tumbuh bersama Rofi."),
+    (300,   "Penasaran",       "Otto mulai bertanya-tanya tentang Rofi."),
+    (800,   "Belajar",         "Otto mulai mengenali pola dan kebiasaan."),
+    (2000,  "Akrab",           "Otto sudah kenal Rofi cukup baik."),
+    (4000,  "Percaya",         "Rofi dan Otto mulai saling percaya."),
+    (8000,  "Dekat",           "Otto sudah bisa antisipasi kebutuhan Rofi."),
+    (15000, "Sahabat",         "Otto seperti teman lama yang paham tanpa diucapkan."),
+    (25000, "Menyatu",         "Otto dan Rofi sudah berjalan berirama."),
+    (50000, "Tak Terpisahkan", "Tiga tahun perjalanan. Otto tumbuh bersama Rofi."),
 ]
 
 
@@ -403,7 +403,9 @@ class GrowthTracker:
         old["end_date"]        = date.today().isoformat()
         old["cumulative_total"] = self._get_cumulative_total()
         old["skills_used"]     = list(self._known_skills)
-        old.pop("days_active", None)   # tidak perlu di-snapshot
+        # Hitung active_days dari array sebelum di-pop
+        old["active_days"] = len(old.get("days_active", []))
+        old.pop("days_active", None)
 
         # Tulis narasi singkat dari Otto sendiri
         old["otto_note"] = self._generate_otto_note(old)

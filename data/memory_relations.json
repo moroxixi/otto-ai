@@ -154,14 +154,14 @@
   "tidur_larut_produktif_malam": {
     "id": "tidur_larut_produktif_malam",
     "from_facts": [
-      "rofi.kebiasaan.tidur",
-      "rofi.produktif.waktu"
+      "rofi.jadwal.persalinan",
+      "rofi.kebiasaan.pelarian"
     ],
     "relation_type": "inferred",
-    "description": "Rofi tidur larut, kemungkinan produktif di malam hari",
+    "description": "Rofi telah melahirkan dan sering mengerjakan proyek coding di malam hari",
     "implication": "Kirim reminder penting antara jam 20-22, bukan pagi hari",
-    "confidence": 0.75,
-    "created_at": 1780903753.9709952,
+    "confidence": 0.7,
+    "created_at": 1780937320.6564295,
     "confirmed_at": null
   },
   "mengantar_barang_ke_teman": {
@@ -467,6 +467,71 @@
     "implication": "Otto harus mengatur jadwal kerja Rofi agar tidak terlalu lelah",
     "confidence": 0.9,
     "created_at": 1780920585.7902699,
+    "confirmed_at": null
+  },
+  "stres_overthinking_keuangan": {
+    "id": "stres_overthinking_keuangan",
+    "from_facts": [
+      "rofi.kesehatan.stres",
+      "rofi.keuangan.status"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi sering mengalami stres dan overthinking karena masalah keuangan",
+    "implication": "Tawarkan bantuan finansial atau konsultasi keuangan jika Rofi sedang stres",
+    "confidence": 0.85,
+    "created_at": 1780937320.5900466,
+    "confirmed_at": null
+  },
+  "membuka_cabang_baru_stres_keuangan": {
+    "id": "membuka_cabang_baru_stres_keuangan",
+    "from_facts": [
+      "rofi.pekerjaan.tujuan",
+      "rofi.keuangan.status"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi ingin membuka cabang baru FNB tetapi memiliki masalah keuangan",
+    "implication": "Diskusikan strategi keuangan yang berkelanjutan untuk mencapai tujuan bisnis Rofi",
+    "confidence": 0.8,
+    "created_at": 1780937320.6544938,
+    "confirmed_at": null
+  },
+  "kopi_oat_pagi_stres": {
+    "id": "kopi_oat_pagi_stres",
+    "from_facts": [
+      "rofi.preferensi.minuman",
+      "rofi.kesehatan.stres"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi suka kopi oat pagi, tetapi juga merasa stres tentang keuangan",
+    "implication": "Tanyakan Rofi tentang keuangan sebelum menawarkan kopi oat",
+    "confidence": 0.8,
+    "created_at": 1780938508.2269585,
+    "confirmed_at": null
+  },
+  "aqiqah_sesudah_persalinan": {
+    "id": "aqiqah_sesudah_persalinan",
+    "from_facts": [
+      "rofi.kesehatan.aqiqah",
+      "rofi.jadwal.kehamilan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi akan melakukan aqiqah setelah istri melahirkan",
+    "implication": "Perlu memastikan Rofi telah melakukan aqiqah sebelumnya",
+    "confidence": 0.7,
+    "created_at": 1780938508.2293284,
+    "confirmed_at": null
+  },
+  "coding_stres_positif": {
+    "id": "coding_stres_positif",
+    "from_facts": [
+      "rofi.kesehatan.stres",
+      "rofi.teknologi.keterampilan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi merasa stres positif saat mengerjakan proyek coding",
+    "implication": "Jangan memotong waktu coding Rofi saat ia sedang produktif",
+    "confidence": 0.8,
+    "created_at": 1780938508.2323775,
     "confirmed_at": null
   }
 }

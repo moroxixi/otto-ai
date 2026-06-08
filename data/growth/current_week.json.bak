@@ -1,0 +1,143 @@
+{
+  "week_number": 4,
+  "year": 2026,
+  "start_date": "2026-06-08",
+  "end_date": "",
+  "locked": false,
+  "score_knowledge": 0,
+  "score_capability": 0,
+  "score_depth": 262,
+  "score_total": 262,
+  "cumulative_total": 2537,
+  "interactions": 24,
+  "active_days": 0,
+  "hypotheses_made": 0,
+  "facts_confirmed": 0,
+  "skills_used": [],
+  "deep_conversations": 17,
+  "errors": 0,
+  "code_updates": 0,
+  "otto_note": "",
+  "events": [
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T18:20:22"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T18:31:44"
+    },
+    {
+      "type": "active_day",
+      "score": 1,
+      "ts": "2026-06-08T18:32:59"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T18:34:22"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T18:35:58"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T18:36:53"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T18:37:48"
+    },
+    {
+      "type": "active_day",
+      "score": 1,
+      "ts": "2026-06-08T18:38:06"
+    },
+    {
+      "type": "active_day",
+      "score": 1,
+      "ts": "2026-06-08T18:49:43"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T18:51:02"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T18:59:49"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T19:03:05"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T19:04:29"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T19:05:46"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T19:06:22"
+    },
+    {
+      "type": "active_day",
+      "score": 1,
+      "ts": "2026-06-08T19:06:41"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T19:07:20"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T19:08:13"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T19:09:43"
+    },
+    {
+      "type": "active_day",
+      "score": 1,
+      "ts": "2026-06-08T19:10:16"
+    },
+    {
+      "type": "active_day",
+      "score": 1,
+      "ts": "2026-06-08T19:10:53"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T19:11:52"
+    },
+    {
+      "type": "deep_conversation",
+      "score": 15,
+      "ts": "2026-06-08T19:13:37"
+    },
+    {
+      "type": "active_day",
+      "score": 1,
+      "ts": "2026-06-08T23:28:39"
+    }
+  ]
+}

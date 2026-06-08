@@ -1,5 +1,5 @@
 ╔══════════════════════════════════════════════════════════════════╗
-Generated  : 2026-06-08 23:46  |  .py: 4709  |  .json: 46
+Generated  : 2026-06-09 00:12  |  .py: 4709  |  .json: 46
 ║                    OTTO-AI — CONTEXT FILE                        ║
 ║           Lampirkan file ini di awal setiap chat baru            ║
 ╚══════════════════════════════════════════════════════════════════╝
@@ -75,8 +75,8 @@ Paralel (diam-diam):
 
 
 [ CORE ]
-  core/brain.py                            ✓  488 baris  (4j lalu)
-  core/config.py                           ✓  139 baris  (135j lalu)
+  core/brain.py                            ✓  488 baris  (5j lalu)
+  core/config.py                           ✓  139 baris  (136j lalu)
   core/__init__.py                         ✓    0 baris  (247j lalu)
   core/memory.py                           ✓  494 baris  (127j lalu)
   core/speaker.py                          ✓  272 baris  (154j lalu)
@@ -84,41 +84,41 @@ Paralel (diam-diam):
   core/vocabulary.py                       ✓  242 baris  (148j lalu)
 
 [ SERVER ]
-  server/app.py                            ✓  558 baris  (47j lalu)
+  server/app.py                            ✓  558 baris  (48j lalu)
   server/__init__.py                       ✓    0 baris  (247j lalu)
 
 [ SKILLS ]
   (belum ada file)
 
 [ INTELLIGENCE ]
-  intelligence/activity_watcher.py         ✓  430 baris  (241j lalu)
-  intelligence/consolidator.py             ✓  624 baris  (96j lalu)
+  intelligence/activity_watcher.py         ✓  430 baris  (242j lalu)
+  intelligence/consolidator.py             ✓  624 baris  (97j lalu)
   intelligence/context_triggers.py         ✓  539 baris  (122j lalu)
-  intelligence/conversation_scanner.py     ✓  644 baris  (4j lalu)
+  intelligence/conversation_scanner.py     ✓  644 baris  (5j lalu)
   intelligence/curiosity.py                ✓  651 baris  (0j lalu)
-  intelligence/growth_tracker.py           ✓  615 baris  (129j lalu)
+  intelligence/growth_tracker.py           ✓  617 baris  (0j lalu)
   intelligence/__init__.py                 ✓    0 baris  (247j lalu)
   intelligence/pending_state.py            ✓  161 baris  (199j lalu)
-  intelligence/profiler.py                 ✓  541 baris  (96j lalu)
-  intelligence/scheduler.py                ✓  468 baris  (107j lalu)
+  intelligence/profiler.py                 ✓  541 baris  (97j lalu)
+  intelligence/scheduler.py                ✓  468 baris  (108j lalu)
 
 [ SELF ]
   otto_self/github_checker.py              ✓  424 baris  (221j lalu)
-  otto_self/__init__.py                    ✓    0 baris  (230j lalu)
+  otto_self/__init__.py                    ✓    0 baris  (231j lalu)
   otto_self/model.py                       ✓  394 baris  (100j lalu)
   otto_self/otto_model.json                ✓   16 baris  (0j lalu)
 
 [ DATA ]
   data/activity_summary.json               ✓  934 baris  (0j lalu)
-  data/consolidation_state.json            ✓    5 baris  (4j lalu)
+  data/consolidation_state.json            ✓    5 baris  (0j lalu)
   data/context_triggers.json               ✓  138 baris  (0j lalu)
-  data/curiosity_pending.json              ✓    4 baris  (52j lalu)
-  data/curiosity_state.json                ✓   11 baris  (52j lalu)
-  data/hypotheses.json                     ✓  217 baris  (4j lalu)
-  data/memory.json                         ✓  241 baris  (4j lalu)
-  data/memory_relations.json               ✓  471 baris  (4j lalu)
+  data/curiosity_pending.json              ✓    4 baris  (53j lalu)
+  data/curiosity_state.json                ✓   11 baris  (53j lalu)
+  data/hypotheses.json                     ✓  325 baris  (0j lalu)
+  data/memory.json                         ✓  295 baris  (0j lalu)
+  data/memory_relations.json               ✓  536 baris  (0j lalu)
   data/short_term_cache.json               ✓  101 baris  (0j lalu)
-  data/vocabulary.json                     ✓  107 baris  (4j lalu)
+  data/vocabulary.json                     ✓  107 baris  (5j lalu)
 
 ━━━ STRUKTUR FOLDER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [4.0K]  /data/asd/otto-ai
@@ -133,9 +133,11 @@ Paralel (diam-diam):
 │   └── [8.2K]  vocabulary.py
 ├── [4.0K]  data
 │   ├── [4.0K]  growth
-│   │   ├── [2.7K]  current_week.json
+│   │   ├── [ 467]  current_week.json
+│   │   ├── [2.7K]  current_week.json.bak
 │   │   ├── [ 10K]  daily_log.jsonl
-│   │   └── [ 15K]  history.json
+│   │   ├── [1.1K]  history.json
+│   │   └── [ 15K]  history.json.bak
 │   ├── [ 62K]  activity.log
 │   ├── [ 16K]  activity_summary.json
 │   ├── [ 136]  consolidation_state.json
@@ -143,9 +145,9 @@ Paralel (diam-diam):
 │   ├── [ 160]  crash.log
 │   ├── [  60]  curiosity_pending.json
 │   ├── [ 178]  curiosity_state.json
-│   ├── [6.3K]  hypotheses.json
-│   ├── [7.0K]  memory.json
-│   ├── [ 17K]  memory_relations.json
+│   ├── [9.4K]  hypotheses.json
+│   ├── [8.7K]  memory.json
+│   ├── [ 19K]  memory_relations.json
 │   ├── [ 276]  README.md
 │   ├── [6.0K]  short_term_cache.json
 │   └── [2.1K]  vocabulary.json
@@ -206,7 +208,8 @@ Paralel (diam-diam):
 │   │   │   ├── [1.4K]  9669125b79614c5cc6e27bf1d766745ce7ee75
 │   │   │   └── [4.0K]  a15ea9b503f5742e442a4d9598bae53f52e195
 │   │   ├── [4.0K]  1a
-│   │   │   └── [ 174]  323f0186e1c030d2a023819a6db7b8f7543983
+│   │   │   ├── [ 174]  323f0186e1c030d2a023819a6db7b8f7543983
+│   │   │   └── [ 175]  b41943eafbb0fba6e23f4e44cdd12f3cc2535d
 │   │   ├── [4.0K]  1c
 │   │   │   └── [ 249]  97f87ad592d0b5a7b9c075554cb00744c1123c
 │   │   ├── [4.0K]  1e
@@ -236,6 +239,8 @@ Paralel (diam-diam):
 │   │   │   └── [6.5K]  f58f5e2b806b66fce642793c65d56da53a2cad
 │   │   ├── [4.0K]  39
 │   │   │   └── [ 83K]  c0fc3e0da50beb4cc9106c313bd68dd9b79452
+│   │   ├── [4.0K]  3b
+│   │   │   └── [ 412]  34813cefcc3a74c6f2504817429472d947eb1d
 │   │   ├── [4.0K]  3d
 │   │   │   └── [ 340]  a49492549808ae4c7927baef6b78bc4c363ece
 │   │   ├── [4.0K]  3e
@@ -280,7 +285,8 @@ Paralel (diam-diam):
 │   │   ├── [4.0K]  63
 │   │   │   └── [ 151]  bc9bbf17d6cab55b0ad59197b34b36bdc76a4c
 │   │   ├── [4.0K]  64
-│   │   │   └── [2.5K]  f4f6f38020cbfb92036c288ee8c847e72c698b
+│   │   │   ├── [2.5K]  f4f6f38020cbfb92036c288ee8c847e72c698b
+│   │   │   └── [ 341]  f7743645a38f1a3ccd83cb7956e6ba0c19ad9e
 │   │   ├── [4.0K]  65
 │   │   │   └── [ 342]  0a15b4a71dccf85baeb75814b09134c4700d33
 │   │   ├── [4.0K]  66
@@ -320,6 +326,8 @@ Paralel (diam-diam):
 │   │   │   └── [ 83K]  6d9f51d53768d0933352b6a5dffdf802ea753b
 │   │   ├── [4.0K]  98
 │   │   │   └── [2.5K]  4b8fba8e3af43c5bd1985847ef499cbbcfadb2
+│   │   ├── [4.0K]  9a
+│   │   │   └── [4.0K]  ef91bffbad9e3615bff42f8f9c0037fac7131a
 │   │   ├── [4.0K]  9e
 │   │   │   └── [ 340]  37e48679c576c573e008a1cab21d8391d544be
 │   │   ├── [4.0K]  a0
@@ -365,6 +373,8 @@ Paralel (diam-diam):
 │   │   │   └── [ 151]  1a7549765aa1bc742452720cc7bba22ec46ce5
 │   │   ├── [4.0K]  d1
 │   │   │   └── [ 194]  2e49238d557719bf393cc4b23e3438ac895f8a
+│   │   ├── [4.0K]  d9
+│   │   │   └── [8.3K]  6bc02ae8d117727c8d5174ea52dbd736a96c88
 │   │   ├── [4.0K]  e0
 │   │   │   └── [ 87K]  e63b8918753cc8c9c08147777d96d213926fb5
 │   │   ├── [4.0K]  e2
@@ -379,6 +389,8 @@ Paralel (diam-diam):
 │   │   │   └── [3.9K]  a9ece14c39be3def1dd38f5d98a7d69f1823b7
 │   │   ├── [4.0K]  f0
 │   │   │   └── [3.8K]  f10dd1152f2c08ddc046eae69588046e805877
+│   │   ├── [4.0K]  f4
+│   │   │   └── [ 88K]  390bd7eb13dabbf701c320e224133327cb94bc
 │   │   ├── [4.0K]  f5
 │   │   │   └── [3.7K]  9025d2a2f1d572624c90cc3ccf49c32829b52a
 │   │   ├── [4.0K]  f6
@@ -9088,7 +9100,7 @@ Paralel (diam-diam):
 ├── [ 514]  .env
 ├── [1.9K]  .gitignore
 ├── [6.2K]  otto_for_claude.txt
-└── [ 35K]  otto.log
+└── [ 36K]  otto.log
 
 ━━━ CARA PAKAI FILE INI ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
