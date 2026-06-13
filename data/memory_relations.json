@@ -154,14 +154,13 @@
   "tidur_larut_produktif_malam": {
     "id": "tidur_larut_produktif_malam",
     "from_facts": [
-      "rofi.jadwal.persalinan",
-      "rofi.kebiasaan.pelarian"
+      "rofi.kebiasaan.tidur"
     ],
     "relation_type": "inferred",
-    "description": "Rofi telah melahirkan dan sering mengerjakan proyek coding di malam hari",
+    "description": "Rofi tidur larut, kemungkinan produktif di malam hari",
     "implication": "Kirim reminder penting antara jam 20-22, bukan pagi hari",
-    "confidence": 0.7,
-    "created_at": 1780937320.6564295,
+    "confidence": 0.8,
+    "created_at": 1781259423.844791,
     "confirmed_at": null
   },
   "mengantar_barang_ke_teman": {
@@ -595,6 +594,159 @@
     "implication": "Tanya Rofi apakah ada masalah pribadi yang perlu dibicarakan",
     "confidence": 0.8,
     "created_at": 1780939806.842803,
+    "confirmed_at": null
+  },
+  "tidur_larut_perencanaan": {
+    "id": "tidur_larut_perencanaan",
+    "from_facts": [
+      "rofi.jadwal.perencanaan",
+      "rofi.kebiasaan.tidur"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi perencanaan pagi dengan istri, tapi kemungkinan tidur larut",
+    "implication": "Peringatkan Rofi untuk tidur lebih awal malam sebelum perencanaan pagi",
+    "confidence": 0.8,
+    "created_at": 1780941529.3336499,
+    "confirmed_at": null
+  },
+  "stress_proyek_coding": {
+    "id": "stress_proyek_coding",
+    "from_facts": [
+      "rofi.kesehatan.overthinking",
+      "rofi.mood.last_negative",
+      "rofi.teknologi"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi mungkin mengalami stres dan overthinking karena proyek coding",
+    "implication": "Bantu Rofi untuk mengurangi stres dengan memberikan saran atau bantuan teknis",
+    "confidence": 0.7,
+    "created_at": 1780941529.3351405,
+    "confirmed_at": null
+  },
+  "kekurangan_tidur_perencanaan": {
+    "id": "kekurangan_tidur_perencanaan",
+    "from_facts": [
+      "rofi.kebiasaan.tidur",
+      "rofi.jadwal.perencanaan"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi kekurangan tidur dan perencanaan pagi dengan istri",
+    "implication": "Ajak Rofi untuk berolahraga atau melakukan kegiatan relaksasi sebelum tidur",
+    "confidence": 0.9,
+    "created_at": 1780941529.3759549,
+    "confirmed_at": null
+  },
+  "istri_terlibat_asi": {
+    "id": "istri_terlibat_asi",
+    "from_facts": [
+      "rofi.kesehatan.asi",
+      "rofi.kesehatan.asi"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki istri yang terlibat dalam memberikan ASI",
+    "implication": "Tanyakan tentang kesehatan dan kebutuhan istri jika Rofi membutuhkan bantuan",
+    "confidence": 0.7,
+    "created_at": 1781093350.4084556,
+    "confirmed_at": null
+  },
+  "kesal_dan_overthinking": {
+    "id": "kesal_dan_overthinking",
+    "from_facts": [
+      "rofi.mood.last_negative",
+      "rofi.kesehatan.overthinking"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki kecenderungan overthinking dan pernah merasa kesal",
+    "implication": "Tanyakan tentang kebutuhan dan masalah Rofi jika dia terlihat kesal atau bingung",
+    "confidence": 0.9,
+    "created_at": 1781093351.2150438,
+    "confirmed_at": null
+  },
+  "tidur_siang_kegiatan": {
+    "id": "tidur_siang_kegiatan",
+    "from_facts": [
+      "rofi.kebiasaan.tidur"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi tidur siang, kemungkinan kegiatan berubah di siang hari",
+    "implication": "Perhatikan jadwal kegiatan Rofi di siang hari",
+    "confidence": 0.8,
+    "created_at": 1781184046.571224,
+    "confirmed_at": null
+  },
+  "kopi_oat_dibuat_setiap_hari": {
+    "id": "kopi_oat_dibuat_setiap_hari",
+    "from_facts": [
+      "rofi.preferensi.minuman"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi suka kopi oat setiap hari, kemungkinan kebiasaan ini konsisten",
+    "implication": "Kirim reminder untuk membeli kopi oat",
+    "confidence": 0.9,
+    "created_at": 1781184047.2034647,
+    "confirmed_at": null
+  },
+  "pergi_jalan_jalan_dini": {
+    "id": "pergi_jalan_jalan_dini",
+    "from_facts": [
+      "rofi.jadwal.pagi"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi pergi jalan-jalan pagi, kemungkinan membutuhkan waktu istirahat",
+    "implication": "Sediakan waktu istirahat tambahan pagi hari, bukan malam",
+    "confidence": 0.7,
+    "created_at": 1781259423.911071,
+    "confirmed_at": null
+  },
+  "asuh_anak_aktif": {
+    "id": "asuh_anak_aktif",
+    "from_facts": [
+      "rofi.kesehatan.asi"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki anak yang aktif, membutuhkan perhatian khusus",
+    "implication": "Sediakan waktu istirahat tambahan untuk asuh anak, bukan malam",
+    "confidence": 0.7,
+    "created_at": 1781259424.0623424,
+    "confirmed_at": null
+  },
+  "tidur_singkat_asi": {
+    "id": "tidur_singkat_asi",
+    "from_facts": [
+      "rofi.kesehatan.tidur",
+      "rofi.kebiasaan.asi"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi tidur singkat, tetapi istrinya pumping ASI",
+    "implication": "Periksa kesehatan ASI anak Rofi lebih sering",
+    "confidence": 0.8,
+    "created_at": 1781338119.5893092,
+    "confirmed_at": null
+  },
+  "kebiasaan_tidur_larut": {
+    "id": "kebiasaan_tidur_larut",
+    "from_facts": [
+      "rofi.kesehatan.tidur",
+      "rofi.jadwal.pagi"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi tidur singkat, tetapi paginya pergi jalan-jalan dengan istri",
+    "implication": "Pastikan Rofi mendapatkan cukup istirahat sebelum jalan-jalan pagi",
+    "confidence": 0.7,
+    "created_at": 1781338119.5905857,
+    "confirmed_at": null
+  },
+  "nama_anak_kopi_oat": {
+    "id": "nama_anak_kopi_oat",
+    "from_facts": [
+      "rofi.karakter.nama",
+      "rofi.preferensi.minuman"
+    ],
+    "relation_type": "inferred",
+    "description": "Rofi memiliki nama anak yang unik dan minuman favorit kopi oat",
+    "implication": "Tanyakan Rofi tentang asal-usul nama anaknya dan kebiasaan minum kopi oat",
+    "confidence": 0.6,
+    "created_at": 1781338119.5913415,
     "confirmed_at": null
   }
 }

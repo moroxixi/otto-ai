@@ -1,5 +1,5 @@
 ╔══════════════════════════════════════════════════════════════════╗
-Generated  : 2026-06-09 00:57  |  .py: 4710  |  .json: 46
+Generated  : 2026-06-13 16:32  |  .py: 4710  |  .json: 46
 ║                    OTTO-AI — CONTEXT FILE                        ║
 ║           Lampirkan file ini di awal setiap chat baru            ║
 ╚══════════════════════════════════════════════════════════════════╝
@@ -75,50 +75,50 @@ Paralel (diam-diam):
 
 
 [ CORE ]
-  core/brain.py                            ✓  487 baris  (0j lalu)
-  core/config.py                           ✓  139 baris  (136j lalu)
-  core/__init__.py                         ✓    0 baris  (248j lalu)
-  core/memory.py                           ✓  494 baris  (128j lalu)
-  core/speaker.py                          ✓  272 baris  (155j lalu)
-  core/transcriber.py                      ✓  107 baris  (131j lalu)
-  core/vocabulary.py                       ✓  242 baris  (149j lalu)
+  core/brain.py                            ✓  487 baris  (111j lalu)
+  core/config.py                           ✓  139 baris  (248j lalu)
+  core/__init__.py                         ✓    0 baris  (359j lalu)
+  core/memory.py                           ✓  494 baris  (239j lalu)
+  core/speaker.py                          ✓  272 baris  (267j lalu)
+  core/transcriber.py                      ✓  107 baris  (242j lalu)
+  core/vocabulary.py                       ✓  242 baris  (261j lalu)
 
 [ SERVER ]
-  server/app.py                            ✓  561 baris  (0j lalu)
-  server/__init__.py                       ✓    0 baris  (248j lalu)
+  server/app.py                            ✓  561 baris  (111j lalu)
+  server/__init__.py                       ✓    0 baris  (359j lalu)
 
 [ SKILLS ]
   (belum ada file)
 
 [ INTELLIGENCE ]
-  intelligence/activity_watcher.py         ✓  430 baris  (243j lalu)
-  intelligence/consolidator.py             ✓  624 baris  (97j lalu)
-  intelligence/context_triggers.py         ✓  539 baris  (123j lalu)
-  intelligence/conversation_scanner.py     ✓  644 baris  (6j lalu)
-  intelligence/curiosity.py                ✓  656 baris  (0j lalu)
-  intelligence/growth_tracker.py           ✓  618 baris  (0j lalu)
-  intelligence/__init__.py                 ✓    0 baris  (248j lalu)
-  intelligence/pending_state.py            ✓  161 baris  (200j lalu)
-  intelligence/profiler.py                 ✓  541 baris  (97j lalu)
-  intelligence/scheduler.py                ✓  468 baris  (108j lalu)
+  intelligence/activity_watcher.py         ✓  430 baris  (354j lalu)
+  intelligence/consolidator.py             ✓  624 baris  (209j lalu)
+  intelligence/context_triggers.py         ✓  539 baris  (235j lalu)
+  intelligence/conversation_scanner.py     ✓  644 baris  (117j lalu)
+  intelligence/curiosity.py                ✓  656 baris  (111j lalu)
+  intelligence/growth_tracker.py           ✓  618 baris  (112j lalu)
+  intelligence/__init__.py                 ✓    0 baris  (359j lalu)
+  intelligence/pending_state.py            ✓  161 baris  (312j lalu)
+  intelligence/profiler.py                 ✓  541 baris  (209j lalu)
+  intelligence/scheduler.py                ✓  468 baris  (220j lalu)
 
 [ SELF ]
-  otto_self/github_checker.py              ✓  424 baris  (222j lalu)
-  otto_self/__init__.py                    ✓    0 baris  (232j lalu)
-  otto_self/model.py                       ✓  394 baris  (101j lalu)
-  otto_self/otto_model.json                ✓   16 baris  (0j lalu)
+  otto_self/github_checker.py              ✓  424 baris  (333j lalu)
+  otto_self/__init__.py                    ✓    0 baris  (343j lalu)
+  otto_self/model.py                       ✓  394 baris  (213j lalu)
+  otto_self/otto_model.json                ✓   16 baris  (111j lalu)
 
 [ DATA ]
-  data/activity_summary.json               ✓  983 baris  (0j lalu)
-  data/consolidation_state.json            ✓    5 baris  (0j lalu)
-  data/context_triggers.json               ✓  152 baris  (0j lalu)
-  data/curiosity_pending.json              ✓    4 baris  (53j lalu)
-  data/curiosity_state.json                ✓   11 baris  (53j lalu)
-  data/hypotheses.json                     ✓  349 baris  (0j lalu)
-  data/memory.json                         ✓  337 baris  (0j lalu)
-  data/memory_relations.json               ✓  599 baris  (0j lalu)
-  data/short_term_cache.json               ✓  101 baris  (0j lalu)
-  data/vocabulary.json                     ✓  107 baris  (5j lalu)
+  data/activity_summary.json               ✓  986 baris  (111j lalu)
+  data/consolidation_state.json            ✓    5 baris  (1j lalu)
+  data/context_triggers.json               ✓  152 baris  (111j lalu)
+  data/curiosity_pending.json              ✓    4 baris  (165j lalu)
+  data/curiosity_state.json                ✓   11 baris  (165j lalu)
+  data/hypotheses.json                     ✓  433 baris  (1j lalu)
+  data/memory.json                         ✓  385 baris  (1j lalu)
+  data/memory_relations.json               ✓  751 baris  (1j lalu)
+  data/short_term_cache.json               ✓  101 baris  (111j lalu)
+  data/vocabulary.json                     ✓  107 baris  (117j lalu)
 
 ━━━ STRUKTUR FOLDER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [4.0K]  /data/asd/otto-ai
@@ -133,21 +133,21 @@ Paralel (diam-diam):
 │   └── [8.2K]  vocabulary.py
 ├── [4.0K]  data
 │   ├── [4.0K]  growth
-│   │   ├── [1.5K]  current_week.json
+│   │   ├── [1.6K]  current_week.json
 │   │   ├── [2.7K]  current_week.json.bak
 │   │   ├── [ 11K]  daily_log.jsonl
 │   │   ├── [1.1K]  history.json
 │   │   └── [ 15K]  history.json.bak
 │   ├── [ 67K]  activity.log
 │   ├── [ 17K]  activity_summary.json
-│   ├── [ 136]  consolidation_state.json
+│   ├── [ 137]  consolidation_state.json
 │   ├── [5.0K]  context_triggers.json
 │   ├── [ 160]  crash.log
 │   ├── [  60]  curiosity_pending.json
 │   ├── [ 178]  curiosity_state.json
-│   ├── [ 10K]  hypotheses.json
-│   ├── [9.9K]  memory.json
-│   ├── [ 21K]  memory_relations.json
+│   ├── [ 12K]  hypotheses.json
+│   ├── [ 11K]  memory.json
+│   ├── [ 26K]  memory_relations.json
 │   ├── [ 276]  README.md
 │   ├── [7.1K]  short_term_cache.json
 │   └── [2.1K]  vocabulary.json
@@ -188,6 +188,7 @@ Paralel (diam-diam):
 │   │   ├── [4.0K]  08
 │   │   │   └── [ 174]  09fe7d903927d665dc9069cdde0db336baea0c
 │   │   ├── [4.0K]  0a
+│   │   │   ├── [ 251]  029968667d95d3789e2ea518bb587c29edb7dd
 │   │   │   └── [7.7K]  b105ae85483ad981fea693eb44c3bcc92c4804
 │   │   ├── [4.0K]  0b
 │   │   │   └── [3.7K]  6ce0849bafdc66c6ffa2383b55ab29ae8c841f
@@ -211,6 +212,8 @@ Paralel (diam-diam):
 │   │   ├── [4.0K]  18
 │   │   │   ├── [1.4K]  9669125b79614c5cc6e27bf1d766745ce7ee75
 │   │   │   └── [4.0K]  a15ea9b503f5742e442a4d9598bae53f52e195
+│   │   ├── [4.0K]  19
+│   │   │   └── [ 151]  03297a21e49456fda7f4108ccfec1c623dc49a
 │   │   ├── [4.0K]  1a
 │   │   │   ├── [ 174]  323f0186e1c030d2a023819a6db7b8f7543983
 │   │   │   └── [ 175]  b41943eafbb0fba6e23f4e44cdd12f3cc2535d
@@ -243,6 +246,8 @@ Paralel (diam-diam):
 │   │   │   └── [7.8K]  6fc493c5c42fd1bb22a8e3e83a5d701904eca1
 │   │   ├── [4.0K]  33
 │   │   │   └── [ 249]  6283544569140e1739d9ec7568b632d911cb92
+│   │   ├── [4.0K]  34
+│   │   │   └── [ 176]  4f064bcc1fb52289cc4bbf7f6601f01db53c79
 │   │   ├── [4.0K]  35
 │   │   │   └── [ 180]  6fba10d7c43a3f5e55d762ca3048d01f26a942
 │   │   ├── [4.0K]  36
@@ -250,10 +255,12 @@ Paralel (diam-diam):
 │   │   │   ├── [6.5K]  f58f5e2b806b66fce642793c65d56da53a2cad
 │   │   │   └── [4.1K]  f7229f4891dfa2932d7b14626f2e6666313b76
 │   │   ├── [4.0K]  39
+│   │   │   ├── [6.5K]  a6e662ef107230242a03a23d138de86c39523b
 │   │   │   └── [ 83K]  c0fc3e0da50beb4cc9106c313bd68dd9b79452
 │   │   ├── [4.0K]  3b
 │   │   │   └── [ 412]  34813cefcc3a74c6f2504817429472d947eb1d
 │   │   ├── [4.0K]  3d
+│   │   │   ├── [ 90K]  5e6238f57767fdf711af6998586bf31e019c11
 │   │   │   └── [ 340]  a49492549808ae4c7927baef6b78bc4c363ece
 │   │   ├── [4.0K]  3e
 │   │   │   ├── [ 232]  20c88789b141a7f53ed5f84615b1f44f032b91
@@ -366,6 +373,8 @@ Paralel (diam-diam):
 │   │   │   └── [ 328]  ab734896eca3e74d10cd92fd2388ea14d49864
 │   │   ├── [4.0K]  98
 │   │   │   └── [2.5K]  4b8fba8e3af43c5bd1985847ef499cbbcfadb2
+│   │   ├── [4.0K]  99
+│   │   │   └── [ 249]  b92a8db543267713e37246e768641e5f406b69
 │   │   ├── [4.0K]  9a
 │   │   │   └── [4.0K]  ef91bffbad9e3615bff42f8f9c0037fac7131a
 │   │   ├── [4.0K]  9e
@@ -391,6 +400,10 @@ Paralel (diam-diam):
 │   │   │   └── [8.3K]  1f4db2229954fbf352f0f6d3cb7caa08eb3217
 │   │   ├── [4.0K]  ac
 │   │   │   └── [ 174]  2d3641161b1f3e17c761bce4a33384fdabb845
+│   │   ├── [4.0K]  ad
+│   │   │   └── [ 342]  8f8de8c5817d59e690ec2309828c94022b8b4c
+│   │   ├── [4.0K]  af
+│   │   │   └── [ 281]  382207d96e1d5551536f79f06a38f02785957a
 │   │   ├── [4.0K]  b0
 │   │   │   └── [4.7K]  f8812cb3ba04afe7e65ac9631efd99b0589a64
 │   │   ├── [4.0K]  b1
@@ -409,6 +422,7 @@ Paralel (diam-diam):
 │   │   ├── [4.0K]  c1
 │   │   │   └── [3.3K]  50a9ffdd9414c0458d9f0d6956da01a0d604ce
 │   │   ├── [4.0K]  c3
+│   │   │   ├── [4.8K]  38d96681ef071000e116dd5a6d6adee5050b28
 │   │   │   ├── [ 194]  9d80288f05f532546a2d7964e1f2d2335a1fa1
 │   │   │   └── [ 341]  cdff826d32176859695c297b5047f36dd37c08
 │   │   ├── [4.0K]  c6
@@ -426,11 +440,16 @@ Paralel (diam-diam):
 │   │   │   └── [ 412]  462d5d23a3f38c279af065945e79f96f8a127f
 │   │   ├── [4.0K]  d1
 │   │   │   └── [ 194]  2e49238d557719bf393cc4b23e3438ac895f8a
+│   │   ├── [4.0K]  d5
+│   │   │   └── [4.1K]  29b398cee9e7b945f11ee0a95e2ebde28ca6b0
 │   │   ├── [4.0K]  d9
 │   │   │   └── [8.3K]  6bc02ae8d117727c8d5174ea52dbd736a96c88
 │   │   ├── [4.0K]  da
 │   │   │   └── [ 175]  54c836f3b831a6089c0d0f279d616ffce9e38c
+│   │   ├── [4.0K]  dc
+│   │   │   └── [2.5K]  bb235e14e706c1af54c5854f497adb45629da9
 │   │   ├── [4.0K]  e0
+│   │   │   ├── [8.4K]  120fc8d07ce4cffa11c1f35d9e533355c2469a
 │   │   │   └── [ 87K]  e63b8918753cc8c9c08147777d96d213926fb5
 │   │   ├── [4.0K]  e2
 │   │   │   └── [ 194]  be190f146a1fa2a5b045832c6724b8328a19ff
@@ -441,9 +460,12 @@ Paralel (diam-diam):
 │   │   │   └── [ 249]  a39e263840f0c03c401bf9454b97b3efb2ebdf
 │   │   ├── [4.0K]  e9
 │   │   │   ├── [ 251]  9e93e3db6e74d8a984be84ea910a4cd9e47530
-│   │   │   └── [3.9K]  a9ece14c39be3def1dd38f5d98a7d69f1823b7
+│   │   │   ├── [3.9K]  a9ece14c39be3def1dd38f5d98a7d69f1823b7
+│   │   │   └── [ 413]  b21fc67dece7cacaeec09b035f734e4f0037dd
 │   │   ├── [4.0K]  f0
 │   │   │   └── [3.8K]  f10dd1152f2c08ddc046eae69588046e805877
+│   │   ├── [4.0K]  f2
+│   │   │   └── [ 194]  6ca8a768fa90d28d61ed19dd71df6d22b1bdb9
 │   │   ├── [4.0K]  f4
 │   │   │   ├── [ 88K]  390bd7eb13dabbf701c320e224133327cb94bc
 │   │   │   └── [ 89K]  fada4b78304873abd688be57f62ca831b02c7c
@@ -460,8 +482,11 @@ Paralel (diam-diam):
 │   │   ├── [4.0K]  fb
 │   │   │   ├── [ 84K]  408fe5ad8bdf549e637214dad886704e4c538c
 │   │   │   └── [ 151]  9d696fc3e17f6f1d0eadc4e402f9651bfaf7b0
+│   │   ├── [4.0K]  fd
+│   │   │   └── [6.3K]  4ea9b31b32a8b7b5559a5cf718f79a23af0d3c
 │   │   ├── [4.0K]  fe
-│   │   │   └── [ 151]  1261a352c17e3d712f440eeb5e9eafbca3e805
+│   │   │   ├── [ 151]  1261a352c17e3d712f440eeb5e9eafbca3e805
+│   │   │   └── [1.5K]  dbd644b3fd6aef27184f44ef2f24c9525e6ca9
 │   │   ├── [4.0K]  info
 │   │   │   ├── [4.0K]  commit-graphs
 │   │   │   │   ├── [  41]  commit-graph-chain
@@ -9159,7 +9184,7 @@ Paralel (diam-diam):
 ├── [4.2K]  catatan.txt
 ├── [ 514]  .env
 ├── [1.9K]  .gitignore
-├── [6.2K]  otto_for_claude.txt
+├── [6.3K]  otto_for_claude.txt
 └── [ 37K]  otto.log
 
 ━━━ CARA PAKAI FILE INI ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
